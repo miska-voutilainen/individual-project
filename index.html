@@ -75,12 +75,14 @@
         <div id="map" aria-label="Kartta opiskelijaravintoloista"></div>
 
         <!-- Restaurant cards grid container (populated dynamically) -->
-        <section class="restaurant-list" id="restaurantList"></section>
+        <section class="restaurant-list" id="restaurantList">
+            <h2 class="hidden" id="restaurantListTitle">Ravintolat</h2>
+        </section>
 
         <!-- Modal popup for displaying restaurant menus -->
         <section class="menu-display" id="menuDisplay">
             <button id="closeMenu" aria-label="Sulje menu">×</button>
-            <h2 id="menuTitle"></h2>
+            <h2 id="menuTitle">Menu</h2>
             <div id="menuContent"></div>
         </section>
 
@@ -90,7 +92,7 @@
             <h2 id="profileHeader">Omat tiedot</h2>
             
             <!-- Profile picture with upload functionality -->
-            <img src="" alt="Profiilikuva" id="profilePic" width="120" height="120">
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect width='120' height='120' fill='%23e9ecef'/%3E%3Ctext x='60' y='65' text-anchor='middle' fill='%23666' font-size='14'%3ENo Image%3C/text%3E%3C/svg%3E" alt="Profiilikuva" id="profilePic" width="120" height="120">
             <input type="file" id="uploadPic" accept="image/*">
             
             <!-- User information form fields -->
