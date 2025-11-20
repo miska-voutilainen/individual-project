@@ -5,6 +5,7 @@ A comprehensive web application for discovering and managing student restaurants
 ## Table of Contents
 
 - [Overview](#overview)
+- [Live Demo & Documentation](#live-demo--documentation)
 - [Architecture](#architecture)
 - [Features](#features)
 - [Technical Implementation](#technical-implementation)
@@ -21,6 +22,12 @@ A comprehensive web application for discovering and managing student restaurants
 ## Overview
 
 The Student Restaurant Finder is a single-page application built with vanilla JavaScript that connects to a restaurant API to provide comprehensive information about student dining facilities. The application emphasizes user experience with features like geolocation-based restaurant discovery, favorite restaurant management, and seamless theme switching.
+
+## Live Demo & Documentation
+
+- **[Live Application](https://users.metropolia.fi/~miskavo/individual_project/)** - Try the full application with all features
+- **[API Documentation](https://users.metropolia.fi/~miskavo/individual_project/docs/global.html)** - Complete JSDoc generated documentation
+- **[GitHub Repository](https://github.com/miska-voutilainen/individual-project)** - Source code and development history
 
 ## Architecture
 
