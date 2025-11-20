@@ -1,81 +1,105 @@
+/* ===================================
+   CSS RESET AND BASE STYLES
+   =================================== */
+
+/* Universal reset for consistent styling across browsers */
 *,
 *::before,
 *::after {
     margin: 0;
     padding: 0;
-    box-sizing: border-box;
+    box-sizing: border-box; /* Include padding and border in element's width/height */
 }
 
+/* HTML root element with smooth scrolling and theme transitions */
 html {
-    scroll-behavior: smooth;
-    background: #f8f9fa;
-    transition: background 0.4s ease;
+    scroll-behavior: smooth; /* Smooth scrolling for anchor links */
+    background: #f8f9fa; /* Light theme background */
+    transition: background 0.4s ease; /* Smooth theme transitions */
 }
 
+/* Dark theme background override */
 html.dark {
-    background: #121212 !important;
+    background: #121212 !important; /* Dark theme background with high priority */
 }
 
+/* Body typography and layout settings */
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    line-height: 1.6;
-    color: #333;
-    min-height: 100vh;
-    transition: color 0.4s ease;
+    line-height: 1.6; /* Optimal readability line spacing */
+    color: #333; /* Default text color for light theme */
+    min-height: 100vh; /* Ensure full viewport height */
+    transition: color 0.4s ease; /* Smooth color transitions for theme changes */
 }
 
+/* Dark theme text color */
 html.dark body {
-    color: #e0e0e0;
+    color: #e0e0e0; /* Light text for dark backgrounds */
 }
 
+/* ===================================
+   LAYOUT AND CONTAINER STYLES
+   =================================== */
+
+/* Main container with responsive max-width */
 .container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 16px;
+    max-width: 1200px; /* Prevent content from being too wide on large screens */
+    margin: 0 auto; /* Center the container */
+    padding: 16px; /* Consistent spacing on all sides */
 }
 
+/* ===================================
+   HEADER AND NAVIGATION STYLES
+   =================================== */
+
+/* Main header with brand colors and rounded design */
 header {
-    background: #007bff;
+    background: #007bff; /* Primary blue color */
     color: white;
-    padding: 28px 20px;
+    padding: 28px 20px; /* Generous padding for visual hierarchy */
     text-align: center;
-    border-radius: 16px;
-    margin-bottom: 28px;
+    border-radius: 16px; /* Rounded corners for modern look */
+    margin-bottom: 28px; /* Space below header */
 }
 
+/* Dark theme header with deeper blue */
 html.dark header {
-    background: #003087 !important;
+    background: #003087 !important; /* Darker blue for better contrast */
 }
 
+/* Main heading typography */
 header h1 {
-    font-size: 2.4rem;
+    font-size: 2.4rem; /* Large, prominent heading */
     margin-bottom: 16px;
-    font-weight: 700;
+    font-weight: 700; /* Bold font weight for emphasis */
 }
 
+/* Navigation bar with flexbox layout */
 nav {
     display: flex;
-    justify-content: center;
+    justify-content: center; /* Center navigation items */
     align-items: center;
-    gap: 14px;
-    flex-wrap: wrap;
+    gap: 14px; /* Consistent spacing between items */
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
     padding: 8px 0;
 }
 
+/* Navigation button base styles */
 nav button {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.15); /* Semi-transparent white background */
     border: none;
     color: white;
     font-size: 1rem;
     padding: 10px 18px;
-    border-radius: 10px;
+    border-radius: 10px; /* Rounded corners */
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.3s ease; /* Smooth hover transitions */
     font-weight: 500;
 }
 
+/* Navigation button hover effects */
 nav button:hover {
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.3); /* Lighter on hover */
 }
 
 #themeToggle {
@@ -99,30 +123,38 @@ html.dark #langSelect {
     border-color: #6ab7ff;
 }
 
+/* ===================================
+   FILTER AND FORM STYLES
+   =================================== */
+
+/* Filter section container with card styling */
 .filters {
     background: white;
-    padding: 28px;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    margin: 28px 0;
+    padding: 28px; /* Generous padding for content spacing */
+    border-radius: 16px; /* Rounded corners */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); /* Subtle shadow for depth */
+    margin: 28px 0; /* Vertical spacing */
 }
 
+/* Dark theme filter container */
 html.dark .filters {
-    background: #1e1e1e !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    background: #1e1e1e !important; /* Dark background */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); /* Stronger shadow for dark theme */
 }
 
+/* Heading styles for sections */
 .filters h2,
 .restaurant-card h3,
 .menu-display h2 {
-    color: #007bff;
+    color: #007bff; /* Brand blue color */
     margin-bottom: 16px;
 }
 
+/* Dark theme heading colors */
 html.dark .filters h2,
 html.dark .restaurant-card h3,
 html.dark .menu-display h2 {
-    color: #6ab7ff !important;
+    color: #6ab7ff !important; /* Lighter blue for dark backgrounds */
 }
 
 .filter-group {
@@ -150,16 +182,22 @@ html.dark .filter-group input {
     color: #e0e0e0;
 }
 
+/* ===================================
+   MAP CONTAINER STYLES
+   =================================== */
+
+/* Google Maps container with fixed height and styling */
 #map {
-    height: 460px;
-    border-radius: 16px;
-    margin: 32px 0;
-    background: #e9ecef;
-    position: relative;
+    height: 460px; /* Fixed height for consistent layout */
+    border-radius: 16px; /* Rounded corners to match design */
+    margin: 32px 0; /* Vertical spacing */
+    background: #e9ecef; /* Fallback background while loading */
+    position: relative; /* For absolute positioning of children */
 }
 
+/* Dark theme map background */
 html.dark #map {
-    background: #2d2d2d !important;
+    background: #2d2d2d !important; /* Darker background for dark theme */
 }
 
 .map-loading {
@@ -228,19 +266,25 @@ html.dark #map {
     flex-wrap: wrap;
 }
 
+/* ===================================
+   RESTAURANT CARD GRID AND STYLING
+   =================================== */
+
+/* Responsive grid layout for restaurant cards */
 .restaurant-list {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-    gap: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); /* Responsive columns */
+    gap: 24px; /* Consistent spacing between cards */
     margin: 24px 0;
 }
 
+/* Individual restaurant card styling */
 .restaurant-card {
     background: white;
-    padding: 24px;
-    border-radius: 16px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    transition: all 0.3s ease;
+    padding: 24px; /* Generous padding for readability */
+    border-radius: 16px; /* Rounded corners */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); /* Subtle shadow for depth */
+    transition: all 0.3s ease; /* Smooth hover animations */
 }
 
 html.dark .restaurant-card {
@@ -263,35 +307,42 @@ html.dark .restaurant-card p {
     color: #bbbbbb;
 }
 
+/* ===================================
+   FAVORITE RESTAURANT INDICATORS
+   =================================== */
+
+/* Favorite restaurant highlighting with golden border and background */
 .favorite-highlight {
-    border: 3px solid #ffc107 !important;
-    box-shadow: 0 0 16px #ffc10744 !important;
-    background: #fffbf0 !important;
-    position: relative;
+    border: 3px solid #ffc107 !important; /* Golden border */
+    box-shadow: 0 0 16px #ffc10744 !important; /* Golden glow effect */
+    background: #fffbf0 !important; /* Light golden background */
+    position: relative; /* For absolute positioned star */
 }
 
+/* Dark theme favorite restaurant background */
 html.dark .favorite-highlight {
-    background: #2d2a1f !important;
+    background: #2d2a1f !important; /* Darker golden background */
 }
 
+/* Star badge for favorite restaurants */
 .favorite-star {
-    position: absolute !important;
-    top: 4px !important;
-    right: 8px !important;
+    position: absolute !important; /* Positioned relative to card */
+    top: 4px !important; /* Distance from top edge */
+    right: 8px !important; /* Distance from right edge */
     width: 32px;
     height: 32px;
-    background: #ffc107;
-    color: #333;
-    border-radius: 50%;
+    background: #ffc107; /* Golden background */
+    color: #333; /* Dark text for contrast */
+    border-radius: 50%; /* Perfect circle */
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 24px;
     font-weight: bold;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-    z-index: 10;
-    border: 2px solid #fff;
-    line-height: 1;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3); /* Shadow for depth */
+    z-index: 10; /* Ensure star appears above other content */
+    border: 2px solid #fff; /* White border for definition */
+    line-height: 1; /* Reset line height for proper centering */
 }
 
 .nearest {
@@ -345,32 +396,39 @@ html.dark .favorite-highlight {
 
 .menu-btn:hover { opacity: 0.9; transform: translateY(-1px); }
 
+/* ===================================
+   MODAL AND MENU DISPLAY STYLES
+   =================================== */
+
+/* Menu modal dialog box */
 .menu-display {
-    display: none;
-    position: fixed;
+    display: none; /* Hidden by default */
+    position: fixed; /* Fixed positioning for modal */
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
-    width: 92%;
-    max-width: 600px;
-    max-height: 92vh;
-    overflow-y: auto;
+    transform: translate(-50%, -50%); /* Center the modal */
+    width: 92%; /* Responsive width with margins */
+    max-width: 600px; /* Maximum width for readability */
+    max-height: 92vh; /* Prevent modal from being too tall */
+    overflow-y: auto; /* Scroll if content is too long */
     background: white;
-    padding: 32px;
-    border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-    z-index: 2000;
+    padding: 32px; /* Generous padding for content */
+    border-radius: 20px; /* Rounded corners */
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3); /* Strong shadow for modal effect */
+    z-index: 2000; /* High z-index to appear above everything */
 }
 
+/* Modal overlay background */
 .menu-overlay {
-    display: none;
+    display: none; /* Hidden by default */
     position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 1500;
-    backdrop-filter: blur(2px);
+    inset: 0; /* Cover entire viewport */
+    background: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
+    z-index: 1500; /* Below modal but above content */
+    backdrop-filter: blur(2px); /* Blur background for focus */
 }
 
+/* Active overlay state */
 .menu-overlay.active {
     display: block;
 }
@@ -510,65 +568,89 @@ select:focus-visible {
     outline-offset: 3px;
 }
 
+/* ===================================
+   RESPONSIVE DESIGN BREAKPOINTS
+   =================================== */
+
+/* Tablet and smaller desktop adjustments */
 @media (max-width: 900px) {
     .restaurant-list {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr; /* Single column layout */
     }
 }
 
+/* Mobile device adjustments */
 @media (max-width: 600px) {
-    header h1 { font-size: 1.9rem; }
-    .filter-group { flex-direction: column; }
+    header h1 { font-size: 1.9rem; } /* Smaller heading for mobile */
+    .filter-group { flex-direction: column; } /* Stack filters vertically */
     .filter-group select,
-    .filter-group input { min-width: 100%; }
-    nav { gap: 10px; }
-    nav button { padding: 10px 14px; font-size: 0.95rem; }
-    #map { height: 340px; }
-    .menu-display { padding: 20px; }
+    .filter-group input { min-width: 100%; } /* Full width form elements */
+    nav { gap: 10px; } /* Tighter spacing in navigation */
+    nav button { padding: 10px 14px; font-size: 0.95rem; } /* Smaller nav buttons */
+    #map { height: 340px; } /* Shorter map on mobile */
+    .menu-display { padding: 20px; } /* Less padding in modals */
 }
 
+/* ===================================
+   ANIMATIONS AND KEYFRAMES
+   =================================== */
+
+/* Spinning animation for loading indicators */
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
 
+/* ===================================
+   SCROLL TO TOP BUTTON
+   =================================== */
+
+/* Fixed position scroll to top button */
 .scroll-top-btn {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
+    position: fixed; /* Fixed positioning for consistent placement */
+    bottom: 20px; /* Distance from bottom edge */
+    right: 20px; /* Distance from right edge */
     width: 45px;
     height: 45px;
-    background: #007bff;
+    background: #007bff; /* Brand blue background */
     color: white;
     border: none;
-    border-radius: 50%;
+    border-radius: 50%; /* Perfect circle */
     font-size: 1.3rem;
-    font-weight: 900;
+    font-weight: 900; /* Very bold arrow */
     cursor: pointer;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-    transition: all 0.3s ease;
-    z-index: 1000;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); /* Shadow for depth */
+    transition: all 0.3s ease; /* Smooth hover animations */
+    z-index: 1000; /* High z-index to appear above content */
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 45px;
-    max-width: 45px;
+    min-width: 45px; /* Prevent shrinking */
+    max-width: 45px; /* Prevent growing */
     padding: 0;
-    line-height: 1;
+    line-height: 1; /* Reset line height for proper centering */
 }
 
+/* Scroll button hover effects */
 .scroll-top-btn:hover {
-    background: #0056b3;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    background: #0056b3; /* Darker blue on hover */
+    transform: translateY(-2px); /* Lift effect */
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4); /* Stronger shadow */
 }
 
+/* Dark theme scroll button */
 html.dark .scroll-top-btn {
-    background: #6ab7ff;
-    color: #121212;
+    background: #6ab7ff; /* Light blue for dark theme */
+    color: #121212; /* Dark text for contrast */
 }
 
+/* Dark theme hover effects */
 html.dark .scroll-top-btn:hover {
-    background: #4da6ff;
+    background: #4da6ff; /* Lighter blue on hover */
 }
 
+/* ===================================
+   UTILITY CLASSES
+   =================================== */
+
+/* Universal hide class with high specificity */
 .hidden { display: none !important; }

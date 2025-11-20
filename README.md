@@ -50,14 +50,15 @@ The application follows a modular approach using vanilla JavaScript with ES6 mod
 
 ### Core Functionality
 1. **Restaurant Discovery**: Browse all available student restaurants with detailed information
-2. **Interactive Mapping**: Visual representation of restaurant locations with custom markers
-3. **Geolocation Integration**: Find nearest restaurants based on user's current location
-4. **Advanced Filtering**: Filter restaurants by city, provider, or search by name
-5. **Menu Viewing**: Access daily and weekly menus with detailed meal information
-6. **User Authentication**: Complete login and registration system with profile management
-7. **Favorites System**: Save and manage preferred restaurants for quick access
-8. **Theme Support**: Toggle between light and dark themes with system preference detection
-9. **Internationalization**: Full Finnish and English language support
+2. **Interactive Mapping**: Google Maps integration with custom markers and info windows
+3. **Directions Feature**: Open Google Maps with route planning to selected restaurants
+4. **Geolocation Integration**: Find nearest restaurants based on user's current location
+5. **Advanced Filtering**: Filter restaurants by city, provider, or search by name
+6. **Menu Viewing**: Access daily and weekly menus with detailed meal information
+7. **Enhanced Authentication**: Secure login/registration with username validation and password confirmation
+8. **Favorites System**: Save and manage preferred restaurants with visual indicators
+9. **Theme Support**: Toggle between light and dark themes with system preference detection
+10. **Internationalization**: Full Finnish and English language support with proper localization
 
 ### User Experience Features
 - **Responsive Design**: Optimized for desktop, tablet, and mobile devices
@@ -66,10 +67,16 @@ The application follows a modular approach using vanilla JavaScript with ES6 mod
 - **Accessibility**: Semantic HTML structure with keyboard navigation support
 - **Performance Optimization**: Efficient DOM manipulation and API call management
 
+### Security Features
+- **Input Validation**: Username validation to prevent SQL injection attacks
+- **Password Security**: Password confirmation to prevent registration typos
+- **Secure Authentication**: JWT token-based authentication with proper session management
+- **CORS Handling**: Proper handling of cross-origin requests for avatar uploads
+
 ## Technical Implementation
 
 ### Application Structure
-The main application file (`index.js`) contains approximately 885 lines of code organized into logical sections:
+The main application file (`index.js`) contains approximately 1090+ lines of code organized into logical sections:
 
 1. **Configuration and Constants**: API endpoints, global variables, and DOM element cache
 2. **Translation System**: Multi-language support with dynamic text replacement
@@ -674,7 +681,7 @@ individual-project/
 ├── index.js            # Core application logic (885 lines)
 ├── styles.css          # Complete styling system with theme support
 ├── jsdoc.json         # JSDoc configuration for documentation generation
-├── .gitignore         # Git ignore rules for generated files
+├── .gitignore         # Git§ ignore rules for generated files
 ├── README.md          # Project documentation (this file)
 ├── package.json        # Project configuration (git-ignored, see installation)
 ├── __tests__/         # Test suite (git-ignored, see installation)
