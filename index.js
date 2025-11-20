@@ -1,396 +1,570 @@
-const API_BASE = "https://media2.edu.metropolia.fi/restaurant/api/v1/restaurants";
+const API_BASE = "https://media2.edu.metropolia.fi/restaurant/api/v1";
 let restaurants = [];
 let currentUser = null;
+let token = null;
 let map = null;
-let markers = [];
+let userLocation = null;
+const matchMedia = typeof window !== "undefined" && window.matchMedia
+    ? window.matchMedia
+    : () => ({ matches: false, addListener: () => {}, removeListener: () => {} });
 
-const elements = {
-    loginBtn: document.getElementById("loginBtn"),
-    registerBtn: document.getElementById("registerBtn"),
-    profileBtn: document.getElementById("profileBtn"),
-    logoutBtn: document.getElementById("logoutBtn"),
-    themeToggle: document.getElementById("themeToggle"),
-    cityFilter: document.getElementById("cityFilter"),
-    providerFilter: document.getElementById("providerFilter"),
-    searchInput: document.getElementById("searchInput"),
-    restaurantList: document.getElementById("restaurantList"),
-    menuDisplay: document.getElementById("menuDisplay"),
-    closeMenu: document.getElementById("closeMenu"),
-    menuTitle: document.getElementById("menuTitle"),
-    menuContent: document.getElementById("menuContent"),
-    loginModal: document.getElementById("loginModal"),
-    registerModal: document.getElementById("registerModal"),
-    closeLogin: document.getElementById("closeLogin"),
-    closeRegister: document.getElementById("closeRegister"),
-    doLogin: document.getElementById("doLogin"),
-    doRegister: document.getElementById("doRegister"),
-    loginUser: document.getElementById("loginUser"),
-    loginPass: document.getElementById("loginPass"),
-    regUser: document.getElementById("regUser"),
-    regEmail: document.getElementById("regEmail"),
-    regPass: document.getElementById("regPass"),
-    profileSection: document.getElementById("profileSection"),
-    profilePic: document.getElementById("profilePic"),
-    uploadPic: document.getElementById("uploadPic"),
-    username: document.getElementById("username"),
-    email: document.getElementById("email"),
-    favoriteRestaurant: document.getElementById("favoriteRestaurant"),
-    updateProfile: document.getElementById("updateProfile")
+let el = {};
+let selectedLang = "fi";
+
+const translations = {
+    fi: {
+        login: "Kirjaudu sisään", register: "Rekisteröidy", profile: "Profiili", logout: "Kirjaudu ulos",
+        theme: "Vaihda teemaa", mainTitle: "Opiskelijaravintolat Suomessa", filterTitle: "Suodata ravintoloita",
+        cityAll: "Kaikki kaupungit", providerAll: "Kaikki palveluntarjoajat", searchPlaceholder: "Hae ravintolaa nimellä...",
+        menuDay: "Päivän menu", menuWeek: "Viikon menu", nearest: "Etäisyys sinusta:", noResults: "Ei tuloksia.",
+        noMenu: "Ei ruokia tänään", favSet: "Suosikkiravintola asetettu!", favFail: "Suosikin asettaminen epäonnistui",
+        fav: "Suosikki", favAdd: "Lisää suosikiksi", profileHeader: "Omat tiedot", favRestOpt: "Valitse suosikkiravintola",
+        updateProfile: "Päivitä tiedot", loginHeader: "Kirjaudu sisään", loginUser: "Käyttäjätunnus", loginPass: "Salasana",
+        doLogin: "Kirjaudu", registerHeader: "Rekisteröidy", regUser: "Käyttäjätunnus", regEmail: "Sähköposti",
+        regPass: "Salasana", doRegister: "Rekisteröidy", yourLocation: "Sinun sijaintisi", distance: "Etäisyys:",
+        loadingRestaurants: "Ladataan ravintoloita...", loadingMap: "Ladataan karttaa...", updatingMap: "Päivitetään karttaa..."
+    },
+    en: {
+        login: "Login", register: "Register", profile: "Profile", logout: "Logout",
+        theme: "Toggle theme", mainTitle: "Student Restaurants in Finland", filterTitle: "Filter restaurants",
+        cityAll: "All cities", providerAll: "All providers", searchPlaceholder: "Search restaurant by name...",
+        menuDay: "Daily menu", menuWeek: "Weekly menu", nearest: "Distance from you:", noResults: "No results.",
+        noMenu: "No meals today", favSet: "Favorite restaurant set!", favFail: "Failed to set favorite",
+        fav: "Favorite", favAdd: "Add as favorite", profileHeader: "My Details", favRestOpt: "Select favorite restaurant",
+        updateProfile: "Update details", loginHeader: "Login", loginUser: "Username", loginPass: "Password",
+        doLogin: "Login", registerHeader: "Register", regUser: "Username", regEmail: "Email",
+        regPass: "Password", doRegister: "Register", yourLocation: "Your location", distance: "Distance:",
+        loadingRestaurants: "Loading restaurants...", loadingMap: "Loading map...", updatingMap: "Updating map..."
+    }
 };
 
-function sanitizeInput(input) {
-    const div = document.createElement("div");
-    div.textContent = input;
-    return div.innerHTML;
-}
+const t = (key) => translations[selectedLang][key] || translations.fi[key] || key;
 
-function validateEmail(email) {
-    return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email);
-}
+async function apiFetch(url, options = {}) {
+    try {
+        let authToken = token || (typeof localStorage !== "undefined" ? localStorage.getItem("token") : null);
+        const headers = { ...options.headers };
+        if (!(options.body instanceof FormData)) {
+            headers["Content-Type"] = "application/json";
+        }
+        if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
 
-function validateUsername(username) {
-    return /^[a-zA-Z0-9_-]{3,20}$/.test(username);
-}
+        const res = await fetch(url, { ...options, headers });
+        const data = await res.json();
 
-function validatePassword(password) {
-    return password.length >= 6;
-}
-
-function showError(modal, message) {
-    modal.querySelectorAll(".error-msg").forEach(e => e.remove());
-    const err = document.createElement("p");
-    err.className = "error-msg";
-    err.style.color = "#dc3545";
-    err.style.margin = "12px 0";
-    err.style.fontSize = "0.95rem";
-    err.textContent = message;
-    modal.querySelector(".modal-content button").before(err);
-}
-
-function loadUser() {
-    const data = localStorage.getItem("currentUser");
-    if (data) {
-        currentUser = JSON.parse(data);
-        updateAuthUI();
+        if (!res.ok) throw new Error(data.message || `HTTP ${res.status}`);
+        return data;
+    } catch (err) {
+        console.error("API Error:", err.message);
+        alert(err.message.includes("Failed to fetch") ? "Ei yhteyttä palvelimeen" : err.message);
+        throw err;
     }
+}
+
+function saveAuth(user, tkn) {
+    token = tkn;
+    currentUser = user;
+    localStorage.setItem("token", tkn);
+    localStorage.setItem("currentUser", JSON.stringify(user));
+    updateAuthUI();
+    loadProfileData();
+}
+
+function loadAuth() {
+    token = localStorage.getItem("token");
+    const stored = localStorage.getItem("currentUser");
+    if (token && stored) {
+        try {
+            currentUser = JSON.parse(stored);
+            updateAuthUI();
+            loadProfileData();
+        } catch (e) {
+            console.error("Invalid stored user data", e);
+        }
+    }
+}
+
+function logout() {
+    token = null;
+    currentUser = null;
+    localStorage.removeItem("token");
+    localStorage.removeItem("currentUser");
+    el.profileSection?.classList.add("hidden");
+    updateAuthUI();
 }
 
 function updateAuthUI() {
-    if (currentUser) {
-        elements.loginBtn.classList.add("hidden");
-        elements.registerBtn.classList.add("hidden");
-        elements.profileBtn.classList.remove("hidden");
-        elements.logoutBtn.classList.remove("hidden");
-        elements.profileBtn.textContent = currentUser.username;
-        loadProfileData();
-    } else {
-        elements.loginBtn.classList.remove("hidden");
-        elements.registerBtn.classList.remove("hidden");
-        elements.profileBtn.classList.add("hidden");
-        elements.logoutBtn.classList.add("hidden");
-    }
+    const loggedIn = !!currentUser && !!token;
+    el.loginBtn?.classList.toggle("hidden", loggedIn);
+    el.registerBtn?.classList.toggle("hidden", loggedIn);
+    el.profileBtn?.classList.toggle("hidden", !loggedIn);
+    el.logoutBtn?.classList.toggle("hidden", !loggedIn);
+    if (loggedIn && el.profileBtn) el.profileBtn.textContent = currentUser.username;
 }
-
-elements.logoutBtn.addEventListener("click", () => {
-    currentUser = null;
-    localStorage.removeItem("currentUser");
-    updateAuthUI();
-    elements.profileSection.classList.add("hidden");
-});
-
-elements.doRegister.addEventListener("click", () => {
-    elements.registerModal.querySelectorAll(".error-msg").forEach(e => e.remove());
-
-    let username = sanitizeInput(elements.regUser.value.trim());
-    let email = sanitizeInput(elements.regEmail.value.trim());
-    let password = elements.regPass.value;
-
-    if (!username || !email || !password) {
-        showError(elements.registerModal, "Kaikki kentät ovat pakollisia.");
-        return;
-    }
-    if (!validateUsername(username)) {
-        showError(elements.registerModal, "Käyttäjätunnus: 3–20 merkkiä, vain kirjaimet, numerot, _ ja -");
-        return;
-    }
-    if (!validateEmail(email)) {
-        showError(elements.registerModal, "Anna kelvollinen sähköpostiosoite.");
-        return;
-    }
-    if (!validatePassword(password)) {
-        showError(elements.registerModal, "Salasanan on oltava vähintään 6 merkkiä.");
-        return;
-    }
-
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
-    if (users.some(u => u.username === username)) {
-        showError(elements.registerModal, "Käyttäjätunnus on jo varattu.");
-        return;
-    }
-
-    users.push({ username, email, password, favoriteRestaurant: "", profilePic: "" });
-    localStorage.setItem("users", JSON.stringify(users));
-    alert("Rekisteröityminen onnistui!");
-    elements.registerModal.style.display = "none";
-    elements.regUser.value = elements.regEmail.value = elements.regPass.value = "";
-});
-
-elements.doLogin.addEventListener("click", () => {
-    elements.loginModal.querySelectorAll(".error-msg").forEach(e => e.remove());
-
-    const username = sanitizeInput(elements.loginUser.value.trim());
-    const password = elements.loginPass.value;
-
-    if (!username || !password) {
-        showError(elements.loginModal, "Anna käyttäjätunnus ja salasana.");
-        return;
-    }
-
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
-    const user = users.find(u => u.username === username && u.password === password);
-
-    if (user) {
-        delete user.password;
-        currentUser = user;
-        localStorage.setItem("currentUser", JSON.stringify(currentUser));
-        updateAuthUI();
-        elements.loginModal.style.display = "none";
-        elements.loginUser.value = elements.loginPass.value = "";
-    } else {
-        showError(elements.loginModal, "Väärä käyttäjätunnus tai salasana.");
-    }
-});
 
 function loadProfileData() {
     if (!currentUser) return;
-    elements.username.value = currentUser.username;
-    elements.email.value = currentUser.email || "";
-    elements.favoriteRestaurant.value = currentUser.favoriteRestaurant || "";
-    if (currentUser.profilePic) elements.profilePic.src = currentUser.profilePic;
-}
-
-elements.uploadPic.addEventListener("change", e => {
-    const file = e.target.files[0];
-    if (file && currentUser) {
-        const reader = new FileReader();
-        reader.onload = ev => {
-            const dataUrl = ev.target.result;
-            elements.profilePic.src = dataUrl;
-            currentUser.profilePic = dataUrl;
-            saveCurrentUser();
-        };
-        reader.readAsDataURL(file);
-    }
-});
-
-elements.updateProfile.addEventListener("click", () => {
-    if (!currentUser) return;
-    currentUser.email = elements.email.value.trim();
-    currentUser.favoriteRestaurant = elements.favoriteRestaurant.value;
-    saveCurrentUser();
-    alert("Profiili päivitetty!");
-});
-
-function saveCurrentUser() {
-    localStorage.setItem("currentUser", JSON.stringify(currentUser));
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
-    const i = users.findIndex(u => u.username === currentUser.username);
-    if (i !== -1) {
-        users[i] = { ...users[i], ...currentUser };
-        localStorage.setItem("users", JSON.stringify(users));
+    if (el.username) el.username.value = currentUser.username || "";
+    if (el.email) el.email.value = currentUser.email || "";
+    if (el.favoriteRestaurant) el.favoriteRestaurant.value = currentUser.favouriteRestaurant || "";
+    if (el.profilePic) {
+        el.profilePic.src = currentUser.avatar
+            ? `${API_BASE}/uploads/${currentUser.avatar}`
+            : "https://via.placeholder.com/120?text=No+Avatar";
     }
 }
 
-async function fetchRestaurants() {
-    try {
-        const res = await fetch(API_BASE);
-        restaurants = await res.json();
-        populateFilters();
-        renderRestaurants();
-        initMap();
-        findNearestRestaurant();
-    } catch {
-        elements.restaurantList.innerHTML = "<p>Virhe ravintoloiden lataamisessa.</p>";
-    }
-}
+function updateUILanguage(lang) {
+    selectedLang = lang;
+    const tr = translations[lang] || translations.fi;
 
-function populateFilters() {
-    const cities = [...new Set(restaurants.map(r => r.city))].sort();
-    const providers = [...new Set(restaurants.map(r => r.company))].sort();
-
-    cities.forEach(c => {
-        const o = new Option(c, c);
-        elements.cityFilter.appendChild(o);
+    ["login", "register", "profile", "logout", "theme"].forEach(key => {
+        if (el[`${key}Btn`]) el[`${key}Btn`].textContent = tr[key];
     });
-    providers.forEach(p => {
-        const o = new Option(p, p);
-        elements.providerFilter.appendChild(o);
+    el.themeToggle?.setAttribute("aria-label", tr.theme);
+    el.themeToggle && (el.themeToggle.textContent = document.documentElement.classList.contains("dark")
+        ? "Light Mode" : "Dark Mode");
+
+    document.getElementById("mainTitle") && (document.getElementById("mainTitle").textContent = tr.mainTitle);
+    document.getElementById("filterTitle") && (document.getElementById("filterTitle").textContent = tr.filterTitle);
+
+    el.cityFilter && (el.cityFilter.options[0].text = tr.cityAll);
+    el.providerFilter && (el.providerFilter.options[0].text = tr.providerAll);
+    el.searchInput && (el.searchInput.placeholder = tr.searchPlaceholder);
+
+    const profileHeader = document.getElementById("profileHeader");
+    if (profileHeader) profileHeader.textContent = tr.profileHeader;
+    const favRestOpt = document.getElementById("favRestOpt");    if (favRestOpt) favRestOpt.textContent = tr.favRestOpt;
+    if (el.updateProfile) el.updateProfile.textContent = tr.updateProfile;
+
+    document.getElementById("loginHeader") && (document.getElementById("loginHeader").textContent = tr.loginHeader);
+    document.getElementById("registerHeader") && (document.getElementById("registerHeader").textContent = tr.registerHeader);
+    ["loginUser", "loginPass", "regUser", "regEmail", "regPass"].forEach(id => {
+        if (el[id]) el[id].placeholder = tr[id] || "";
     });
+    if (el.doLogin) el.doLogin.textContent = tr.doLogin;
+    if (el.doRegister) el.doRegister.textContent = tr.doRegister;
+}
+
+function haversine(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const toRad = x => x * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 +
+              Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function getUserLocation() {
+    return new Promise((resolve) => {
+        if (!navigator.geolocation) return resolve(null);
+        if (userLocation) return resolve(userLocation);
+
+        navigator.geolocation.getCurrentPosition(
+            pos => {
+                userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                resolve(userLocation);
+            },
+            () => resolve(null),
+            { timeout: 10000 }
+        );
+    });
+}
+
+async function renderMap() {
+    if (typeof L === "undefined" || !document.getElementById("map")) return;
+    const mapEl = document.getElementById("map");
+
+    if (!map) {
+        mapEl.innerHTML = "";
+        map = L.map("map").setView([60.1699, 24.9384], 10);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+    } else {
+        map.eachLayer(l => l instanceof L.Marker && map.removeLayer(l));
+    }
+
+    let loading = mapEl.querySelector(".map-loading");
+    if (!loading) {
+        loading = document.createElement("div");
+        loading.className = "map-loading";
+        loading.textContent = map ? t("updatingMap") : t("loadingMap");
+        mapEl.appendChild(loading);
+    }
+
+    const loc = await getUserLocation();
+
+    if (loc) {
+        L.marker([loc.lat, loc.lng], {
+            icon: L.icon({
+                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+                shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+                iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+            })
+        }).addTo(map).bindPopup(t("yourLocation")).openPopup();
+    }
+
     restaurants.forEach(r => {
-        const o = new Option(r.name, r._id);
-        elements.favoriteRestaurant.appendChild(o.cloneNode(true));
+        if (!r.location?.coordinates) return;
+        const [lng, lat] = r.location.coordinates;
+        const dist = loc ? haversine(loc.lat, loc.lng, lat, lng).toFixed(2) : null;
+
+        const isFav = currentUser?.favouriteRestaurant === r._id;
+        const iconUrl = isFav
+            ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png'
+            : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png';
+
+        const marker = L.marker([lat, lng], {
+            icon: L.icon({
+                iconUrl,
+                shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+                iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+            })
+        }).addTo(map);
+
+        const popupHTML = `
+            <b>${r.name}</b><br>${r.address}<br>
+            ${dist ? `${t("distance")} ${dist} km<br>` : ""}
+            <div class="menu-popup-buttons">
+                <button class="menu-btn" onclick="window.showDailyMenu('${r._id}')">${t("menuDay")}</button>
+                <button class="menu-btn" onclick="window.showWeeklyMenu('${r._id}')">${t("menuWeek")}</button>
+            </div>`;
+        marker.bindPopup(popupHTML);
     });
+
+    setTimeout(() => loading.remove(), 400);
 }
 
-function filterRestaurants() {
-    const city = elements.cityFilter.value;
-    const provider = elements.providerFilter.value;
-    const term = elements.searchInput.value.toLowerCase();
+async function renderRestaurants(list = restaurants) {
+    if (!el.restaurantList) return;
 
-    let list = restaurants;
-    if (city) list = list.filter(r => r.city === city);
-    if (provider) list = list.filter(r => r.company === provider);
-    if (term) list = list.filter(r => r.name.toLowerCase().includes(term));
-
-    renderRestaurants(list);
-}
-
-function renderRestaurants(list = restaurants) {
-    elements.restaurantList.innerHTML = "";
-    if (!list.length) {
-        elements.restaurantList.innerHTML = "<p>Ei ravintoloita valituilla suodattimilla.</p>";
-        return;
+    let sorted = [...list];
+    if (currentUser?.favouriteRestaurant) {
+        sorted.sort((a, b) => (a._id === currentUser.favouriteRestaurant ? -1 : b._id === currentUser.favouriteRestaurant ? 1 : 0));
     }
-    list.forEach(r => {
+
+    el.restaurantList.innerHTML = sorted.length ? "" : `<p>${t("noResults")}</p>`;
+
+    const loc = await getUserLocation();
+
+    sorted.forEach(r => {
         const card = document.createElement("div");
         card.className = "restaurant-card";
-        if (currentUser?.favoriteRestaurant === r._id) card.style.border = "3px solid #ffc107";
+        if (currentUser?.favouriteRestaurant === r._id) card.classList.add("favorite-highlight");
+
+        let distanceHTML = "";
+        if (loc && r.location?.coordinates) {
+            const [lng, lat] = r.location.coordinates;
+            const dist = haversine(loc.lat, loc.lng, lat, lng).toFixed(2);
+            distanceHTML = `<p><strong>${t("nearest")}</strong> ${dist} km</p>`;
+        }
+
+        const favBtn = currentUser
+            ? `<button class="favorite-btn" onclick="window.setFavoriteRestaurant('${r._id}')">
+                 ${currentUser.favouriteRestaurant === r._id ? t("fav") : t("favAdd")}
+               </button>`
+            : "";
 
         card.innerHTML = `
             <h3>${r.name}</h3>
-            <p><strong>Osoite:</strong> ${r.address}</p>
-            <p><strong>Kaupunki:</strong> ${r.city}</p>
-            <p><strong>Palveluntarjoaja:</strong> ${r.company}</p>
+            <p><strong>${t("address") || (selectedLang === "en" ? "Address:" : "Osoite:")}</strong> ${r.address}</p>
+            <p><strong>${t("cityLabel") || (selectedLang === "en" ? "City:" : "Kaupunki:")}</strong> ${r.city}</p>
+            <p><strong>${t("providerLabel") || (selectedLang === "en" ? "Provider:" : "Palveluntarjoaja:")}</strong> ${r.company}</p>            ${distanceHTML}
+            ${favBtn}
             <div class="menu-options">
-                <button onclick="showDailyMenu('${r._id}')">Päivän menu</button>
-                <button onclick="showWeeklyMenu('${r._id}')">Viikon menu</button>
-            </div>
-        `;
-        elements.restaurantList.appendChild(card);
+                <button class="menu-btn" onclick="window.showDailyMenu('${r._id}')">${t("menuDay")}</button>
+                <button class="menu-btn" onclick="window.showWeeklyMenu('${r._id}')">${t("menuWeek")}</button>
+            </div>`;
+        el.restaurantList.appendChild(card);
     });
-}
 
-async function showDailyMenu(id) {
-    const r = restaurants.find(x => x._id === id);
-    try {
-        const res = await fetch(`https://media2.edu.metropolia.fi/restaurant/api/v1/restaurants/daily/${id}/fi`);
-        const data = await res.json();
-        displayMenu(`${r.name} – Päivän menu`, data.courses ? Object.values(data.courses) : []);
-    } catch {
-        displayMenu(`${r.name}`, []);
-    }
-}
-
-async function showWeeklyMenu(id) {
-    const r = restaurants.find(x => x._id === id);
-    try {
-        const res = await fetch(`https://media2.edu.metropolia.fi/restaurant/api/v1/restaurants/weekly/${id}/fi`);
-        const week = await res.json();
-        let html = "";
-        week.days.forEach(d => {
-            if (d.date && d.courses) {
-                html += `<h4>${new Date(d.date).toLocaleDateString("fi-FI", {weekday:"long", day:"numeric", month:"long"})}</h4><ul>`;
-                Object.values(d.courses).forEach(c => html += `<li><strong>${c.title}</strong> ${c.dietcodes||""}</li>`);
-                html += "</ul>";
-            }
-        });
-        displayMenu(`${r.name} – Viikon menu`, html || "<p>Viikon ruokalistaa ei saatavilla.</p>");
-    } catch {
-        displayMenu(`${r.name}`, "<p>Viikon ruokalistaa ei saatavilla.</p>");
-    }
-}
-
-function displayMenu(title, content) {
-    elements.menuTitle.textContent = title;
-    if (typeof content === "string") {
-        elements.menuContent.innerHTML = content;
-    } else if (Array.isArray(content)) {
-        elements.menuContent.innerHTML = content.length
-            ? content.map(c => `<p><strong>${c.title}</strong> ${c.dietcodes||""}</p>`).join("")
-            : "<p>Ei ruokia tänään.</p>";
-    }
-    elements.menuDisplay.style.display = "block";
-}
-
-elements.closeMenu.addEventListener("click", () => elements.menuDisplay.style.display = "none");
-
-function initMap() {
-    if (map) return;
-    const div = document.getElementById("map");
-    div.innerHTML = "";
-    map = L.map("map").setView([60.1699, 24.9384], 10);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
-    restaurants.forEach(r => {
-        if (r.location?.coordinates) {
-            const [lng, lat] = r.location.coordinates;
-            L.marker([lat, lng]).addTo(map).bindPopup(`<b>${r.name}</b><br>${r.address}`);
-        }
-    });
-}
-
-function findNearestRestaurant() {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(pos => {
-        const ulat = pos.coords.latitude;
-        const ulng = pos.coords.longitude;
-        let nearest = null;
-        let minDist = Infinity;
+    if (loc) {
+        let nearest = null, minDist = Infinity;
         restaurants.forEach(r => {
             if (r.location?.coordinates) {
                 const [lng, lat] = r.location.coordinates;
-                const d = distance(ulat, ulng, lat, lng);
+                const d = haversine(loc.lat, loc.lng, lat, lng);
                 if (d < minDist) { minDist = d; nearest = r; }
             }
         });
         if (nearest) {
-            document.querySelectorAll(".restaurant-card").forEach(card => {
-                if (card.querySelector("h3").textContent === nearest.name) card.classList.add("nearest");
+            document.querySelectorAll(".restaurant-card").forEach(c => {
+                if (c.querySelector("h3")?.textContent === nearest.name) c.classList.add("nearest");
             });
         }
+    }
+}
+
+function filterAndRender() {
+    let filtered = restaurants;
+
+    if (el.cityFilter?.value) filtered = filtered.filter(r => r.city === el.cityFilter.value);
+    if (el.providerFilter?.value) filtered = filtered.filter(r => r.company === el.providerFilter.value);
+    if (el.searchInput?.value.trim()) {
+        const term = el.searchInput.value.trim().toLowerCase();
+        filtered = filtered.filter(r => r.name?.toLowerCase().includes(term));
+    }
+
+    renderRestaurants(filtered);
+    renderMap();
+}
+
+window.setFavoriteRestaurant = async (id) => {
+    if (!currentUser || !token) return;
+    try {
+        await apiFetch(`${API_BASE}/users`, {
+            method: "PUT",
+            body: JSON.stringify({ favouriteRestaurant: id })
+        });
+        currentUser.favouriteRestaurant = id;
+        localStorage.setItem("currentUser", JSON.stringify(currentUser));
+        filterAndRender();
+        alert(t("favSet"));
+    } catch {
+        alert(t("favFail"));
+    }
+};
+
+async function displayMenu(title, content) {
+    if (!el.menuDisplay) return;
+    el.menuTitle.textContent = title;
+    el.menuContent.innerHTML = typeof content === "string" ? content : (
+        content.length
+            ? content.map(c => `<p><strong>${c.name}</strong> ${c.diets ? `<span>${c.diets}</span>` : ""} ${c.price ? `<span>${c.price}€</span>` : ""}</p>`).join("")
+            : `<p>${t("noMenu")}</p>`
+    );
+    el.menuDisplay.style.display = "block";
+    document.body.style.overflow = "hidden";
+}
+
+window.showDailyMenu = async (id) => {
+    const r = restaurants.find(x => x._id === id);
+    if (!r) return;
+    try {
+        const lang = el.langSelect?.value || selectedLang;
+        const data = await apiFetch(`${API_BASE}/restaurants/daily/${id}/${lang}`);
+        const courses = data.courses ? Object.values(data.courses) : [];
+        displayMenu(`${r.name} – ${t("menuDay")}`, courses);
+    } catch {
+        displayMenu(r.name, `<p>${t("noMenu")}</p>`);
+    }
+};
+
+window.showWeeklyMenu = async (id) => {
+    const r = restaurants.find(x => x._id === id);
+    if (!r) return;
+    try {
+        const lang = el.langSelect?.value || selectedLang;
+        const week = await apiFetch(`${API_BASE}/restaurants/weekly/${id}/${lang}`);
+        let html = "";
+
+        const weekdays = selectedLang === "en"
+            ? ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+            : ["Maanantai", "Tiistai", "Keskiviikko", "Torstai", "Perjantai", "Lauantai", "Sunnuntai"];
+
+        if (week.days.length === 1 && week.days[0].courses) {
+            const all = Object.values(week.days[0].courses);
+            const chunk = Math.ceil(all.length / 5);
+            for (let i = 0; i < 5; i++) {
+                const slice = all.slice(i * chunk, (i + 1) * chunk);
+                html += `<h4>${weekdays[i]}</h4>`;
+                html += slice.length ? "<ul>" + slice.map(c =>
+                    `<li><strong>${c.name}</strong> ${c.diets ? `<span>${c.diets}</span>` : ""} ${c.price ? `<span>${c.price}€</span>` : ""}</li>`
+                ).join("") + "</ul>" : `<p>${t("noMenu")}</p>`;
+            }
+        } else {
+            week.days.forEach((d, i) => {
+                const dateStr = d.date
+                    ? new Date(d.date).toLocaleDateString(selectedLang === "en" ? "en-GB" : "fi-FI", { weekday: "long", day: "numeric", month: "long" })
+                    : weekdays[i % 7];
+                html += `<h4>${dateStr}</h4>`;
+                if (d.courses && Object.values(d.courses).length) {
+                    html += "<ul>" + Object.values(d.courses).map(c =>
+                        `<li><strong>${c.name}</strong> ${c.diets ? `<span>${c.diets}</span>` : ""} ${c.price ? `<span>${c.price}€</span>` : ""}</li>`
+                    ).join("") + "</ul>";
+                } else {
+                    html += `<p>${t("noMenu")}</p>`;
+                }
+            });
+        }
+        displayMenu(`${r.name} – ${t("menuWeek")}`, html || `<p>${t("noMenu")}</p>`);
+    } catch {
+        displayMenu(r.name, `<p>${t("noMenu")}</p>`);
+    }
+};
+
+async function fetchRestaurants() {
+    if (el.restaurantList) el.restaurantList.innerHTML = `<div class="loading-indicator">${t("loadingRestaurants")}</div>`;
+
+    try {
+        restaurants = await apiFetch(`${API_BASE}/restaurants`);
+        populateFilters();
+        await Promise.all([renderRestaurants(), renderMap()]);
+    } catch (err) {
+        if (el.restaurantList) el.restaurantList.innerHTML = "<p style='color:red'>Ravintoloiden lataus epäonnistui</p>";
+    }
+}
+
+function populateFilters() {
+    if (!el.cityFilter || !el.providerFilter || !el.favoriteRestaurant) return;
+
+    const cities = [...new Set(restaurants.map(r => r.city))].sort();
+    const companies = [...new Set(restaurants.map(r => r.company))].sort();
+
+    [el.cityFilter, el.providerFilter].forEach(sel => {
+        while (sel.options.length > 1) sel.remove(1);
+        sel.options[0].text = selectedLang === "en" ? "All cities" : "Kaikki kaupungit";
+    });
+    el.favoriteRestaurant.length = 1;
+
+    cities.forEach(c => el.cityFilter.add(new Option(c, c)));
+    companies.forEach(c => el.providerFilter.add(new Option(c, c)));
+    restaurants.forEach(r => el.favoriteRestaurant.add(new Option(r.name, r._id)));
+}
+
+if (typeof document !== "undefined") {
+    function initializeElements() {
+        el = {
+            langSelect: document.getElementById("langSelect"),
+            loginBtn: document.getElementById("loginBtn"),
+            registerBtn: document.getElementById("registerBtn"),
+            profileBtn: document.getElementById("profileBtn"),
+            logoutBtn: document.getElementById("logoutBtn"),
+            themeToggle: document.getElementById("themeToggle"),
+            cityFilter: document.getElementById("cityFilter"),
+            providerFilter: document.getElementById("providerFilter"),
+            searchInput: document.getElementById("searchInput"),
+            restaurantList: document.getElementById("restaurantList"),
+            menuDisplay: document.getElementById("menuDisplay"),
+            closeMenu: document.getElementById("closeMenu"),
+            menuTitle: document.getElementById("menuTitle"),
+            menuContent: document.getElementById("menuContent"),
+            loginModal: document.getElementById("loginModal"),
+            registerModal: document.getElementById("registerModal"),
+            closeLogin: document.getElementById("closeLogin"),
+            closeRegister: document.getElementById("closeRegister"),
+            doLogin: document.getElementById("doLogin"),
+            doRegister: document.getElementById("doRegister"),
+            loginUser: document.getElementById("loginUser"),
+            loginPass: document.getElementById("loginPass"),
+            regUser: document.getElementById("regUser"),
+            regEmail: document.getElementById("regEmail"),
+            regPass: document.getElementById("regPass"),
+            profileSection: document.getElementById("profileSection"),
+            profilePic: document.getElementById("profilePic"),
+            uploadPic: document.getElementById("uploadPic"),
+            username: document.getElementById("username"),
+            email: document.getElementById("email"),
+            favoriteRestaurant: document.getElementById("favoriteRestaurant"),
+            updateProfile: document.getElementById("updateProfile")
+        };
+    }
+
+    function setupEventListeners() {
+        el.themeToggle?.addEventListener("click", () => {
+            document.documentElement.classList.toggle("dark");
+            const isDark = document.documentElement.classList.contains("dark");
+            el.themeToggle.textContent = isDark ? "Light Mode" : "Dark Mode";
+            localStorage.setItem("theme", isDark ? "dark" : "light");
+        });
+
+        el.langSelect?.addEventListener("change", () => {
+            selectedLang = el.langSelect.value;
+            updateUILanguage(selectedLang);
+            filterAndRender();
+        });
+
+        el.cityFilter && (el.cityFilter.onchange = filterAndRender);
+        el.providerFilter && (el.providerFilter.onchange = filterAndRender);
+        el.searchInput && (el.searchInput.oninput = () => { if (el.searchInput.value.length === 0 || el.searchInput.value.length > 2) filterAndRender(); });
+
+        el.loginBtn?.addEventListener("click", () => el.loginModal.style.display = "flex");
+        el.registerBtn?.addEventListener("click", () => el.registerModal.style.display = "flex");
+        [el.closeLogin, el.closeRegister].forEach(btn => btn?.addEventListener("click", () => {
+            el.loginModal.style.display = el.registerModal.style.display = "none";
+        }));
+        window.addEventListener("click", e => {
+            if (e.target === el.loginModal) el.loginModal.style.display = "none";
+            if (e.target === el.registerModal) el.registerModal.style.display = "none";
+        });
+
+        el.doRegister?.addEventListener("click", async () => {
+            const u = el.regUser.value.trim(), e = el.regEmail.value.trim(), p = el.regPass.value;
+            if (!u || !e || !p) return alert("Täytä kaikki kentät");
+            if (p.length < 6) return alert("Salasana vähintään 6 merkkiä");
+            try {
+                await apiFetch(`${API_BASE}/users`, { method: "POST", body: JSON.stringify({ username: u, email: e, password: p }) });
+                alert("Rekisteröityminen onnistui! Tarkista sähköpostisi.");
+                el.registerModal.style.display = "none";
+            } catch { }
+        });
+
+        el.doLogin?.addEventListener("click", async () => {
+            const u = el.loginUser.value.trim(), p = el.loginPass.value;
+            if (!u || !p) return alert("Täytä kentät");
+            try {
+                const data = await apiFetch(`${API_BASE}/auth/login`, { method: "POST", body: JSON.stringify({ username: u, password: p }) });
+                saveAuth(data.data, data.token);
+                el.loginModal.style.display = "none";
+            } catch { }
+        });
+
+        el.updateProfile?.addEventListener("click", async () => {
+            if (!token) return;
+            const updates = {
+                email: el.email.value.trim(),
+                favouriteRestaurant: el.favoriteRestaurant.value || null
+            };
+            try {
+                await apiFetch(`${API_BASE}/users`, { method: "PUT", body: JSON.stringify(updates) });
+                Object.assign(currentUser, updates);
+                localStorage.setItem("currentUser", JSON.stringify(currentUser));
+                alert("Profiili päivitetty");
+                filterAndRender();
+            } catch { }
+        });
+
+        el.uploadPic?.addEventListener("change", async e => {
+            const file = e.target.files[0];
+            if (!file || !token) return;
+            const form = new FormData();
+            form.append("avatar", file);
+            try {
+                const data = await apiFetch(`${API_BASE}/users/avatar`, { method: "POST", body: form });
+                currentUser.avatar = data.data.avatar;
+                localStorage.setItem("currentUser", JSON.stringify(currentUser));
+                el.profilePic.src = `${API_BASE}/uploads/${currentUser.avatar}`;
+            } catch { }
+        });
+
+        el.closeMenu?.addEventListener("click", () => {
+            el.menuDisplay.style.display = "none";
+            document.body.style.overflow = "";
+        });
+
+        el.logoutBtn?.addEventListener("click", logout);
+        el.profileBtn?.addEventListener("click", () => {
+            el.profileSection?.classList.remove("hidden");
+            el.profileSection?.scrollIntoView({ behavior: "smooth" });
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        initializeElements();
+        setupEventListeners();
+
+        if (localStorage.getItem("theme") === "dark" || (!localStorage.getItem("theme") && matchMedia("(prefers-color-scheme: dark)").matches)) {
+            document.documentElement.classList.add("dark");
+            if (el.themeToggle) el.themeToggle.textContent = "Light Mode";
+        }
+
+        loadAuth();
+        selectedLang = el.langSelect?.value || "fi";
+        updateUILanguage(selectedLang);
+        fetchRestaurants();
     });
 }
 
-function distance(lat1, lon1, lat2, lon2) {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2)**2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2)**2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-elements.themeToggle.addEventListener("click", () => {
-    document.documentElement.classList.toggle("dark");
-    const dark = document.documentElement.classList.contains("dark");
-    elements.themeToggle.textContent = dark ? "Light Mode" : "Dark Mode";
-    localStorage.setItem("theme", dark ? "dark" : "light");
-});
-
-if (localStorage.getItem("theme") === "dark" || (!localStorage.getItem("theme") && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
-    document.documentElement.classList.add("dark");
-    elements.themeToggle.textContent = "Light Mode";
-}
-
-elements.cityFilter.addEventListener("change", filterRestaurants);
-elements.providerFilter.addEventListener("change", filterRestaurants);
-elements.searchInput.addEventListener("input", filterRestaurants);
-elements.loginBtn.addEventListener("click", () => elements.loginModal.style.display = "flex");
-elements.registerBtn.addEventListener("click", () => elements.registerModal.style.display = "flex");
-elements.profileBtn.addEventListener("click", () => elements.profileSection.classList.toggle("hidden"));
-elements.closeLogin.addEventListener("click", () => elements.loginModal.style.display = "none");
-elements.closeRegister.addEventListener("click", () => elements.registerModal.style.display = "none");
-window.addEventListener("click", e => {
-    if (e.target === elements.loginModal) elements.loginModal.style.display = "none";
-    if (e.target === elements.registerModal) elements.registerModal.style.display = "none";
-});
-
-const leafletCSS = document.createElement("link");
-leafletCSS.rel = "stylesheet";
-leafletCSS.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-document.head.appendChild(leafletCSS);
-
-const leafletScript = document.createElement("script");
-leafletScript.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-leafletScript.onload = () => { loadUser(); fetchRestaurants(); };
-document.head.appendChild(leafletScript);
+export { apiFetch, saveAuth, loadAuth, logout };

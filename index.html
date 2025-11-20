@@ -6,24 +6,32 @@
     <meta name="description" content="Löydä Suomen opiskelijaravintolat, suodata kaupungin ja palveluntarjoajan mukaan sekä katso päivän menu.">
     <title>Opiskelijaravintolat Suomessa</title>
     <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-sA+zWATbFveLLNqHNCLzX3Js50qqXi+jrQ7Dc7RZ6LI="
+          crossorigin=""/>
+
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Opiskelijaravintolat Suomessa</h1>
+            <h1 id="mainTitle">Opiskelijaravintolat Suomessa</h1>
             <nav aria-label="Päänavigaatio">
                 <button id="loginBtn">Kirjaudu sisään</button>
                 <button id="registerBtn">Rekisteröidy</button>
                 <button id="profileBtn" class="hidden">Profiili</button>
                 <button id="logoutBtn" class="hidden">Kirjaudu ulos</button>
                 <button id="themeToggle" aria-label="Vaihda teemaa">Dark Mode</button>
+                <select id="langSelect" style="margin-left:1em;">
+                    <option value="fi">Suomi</option>
+                    <option value="en">English</option>
+                </select>
             </nav>
         </header>
 
         <section class="filters">
-            <h2>Suodata ravintoloita</h2>
+            <h2 id="filterTitle">Suodata ravintoloita</h2>
             <div class="filter-group">
                 <select id="cityFilter">
                     <option value="">Kaikki kaupungit</option>
@@ -35,26 +43,24 @@
             </div>
         </section>
 
-        <section id="map" aria-label="Kartta opiskelijaravintoloista">
-            Kartta tulee tähän
-        </section>
+        <section id="map" aria-label="Kartta opiskelijaravintoloista"></section>
 
         <section class="restaurant-list" id="restaurantList"></section>
 
         <section class="menu-display" id="menuDisplay">
-            <button id="closeMenu">×</button>
+            <button id="closeMenu" aria-label="Sulje menu">×</button>
             <h2 id="menuTitle"></h2>
             <div id="menuContent"></div>
         </section>
 
         <section class="profile hidden" id="profileSection">
-            <h2>Omat tiedot</h2>
-            <img src="" alt="Profiilikuva" id="profilePic">
+            <h2 id="profileHeader">Omat tiedot</h2>
+            <img src="" alt="Profiilikuva" id="profilePic" width="120" height="120">
             <input type="file" id="uploadPic" accept="image/*">
-            <input type="text" id="username" placeholder="Käyttäjätunnus">
+            <input type="text" id="username" placeholder="Käyttäjätunnus" disabled>
             <input type="email" id="email" placeholder="Sähköposti">
             <select id="favoriteRestaurant">
-                <option value="">Valitse suosikkiravintola</option>
+                <option value="" id="favRestOpt">Valitse suosikkiravintola</option>
             </select>
             <button id="updateProfile">Päivitä tiedot</button>
         </section>
@@ -63,7 +69,7 @@
     <div class="modal" id="loginModal">
         <div class="modal-content">
             <span class="close" id="closeLogin">×</span>
-            <h2>Kirjaudu sisään</h2>
+            <h2 id="loginHeader">Kirjaudu sisään</h2>
             <input type="text" id="loginUser" placeholder="Käyttäjätunnus">
             <input type="password" id="loginPass" placeholder="Salasana">
             <button id="doLogin">Kirjaudu</button>
@@ -73,7 +79,7 @@
     <div class="modal" id="registerModal">
         <div class="modal-content">
             <span class="close" id="closeRegister">×</span>
-            <h2>Rekisteröidy</h2>
+            <h2 id="registerHeader">Rekisteröidy</h2>
             <input type="text" id="regUser" placeholder="Käyttäjätunnus">
             <input type="email" id="regEmail" placeholder="Sähköposti">
             <input type="password" id="regPass" placeholder="Salasana">
@@ -81,6 +87,10 @@
         </div>
     </div>
 
-    <script src="index.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-o9N1jY8Z6gB8tL8QZpI2r8d1gB6rVq1s9b5NlN2gq7Q="
+            crossorigin=""></script>
+
+    <script type="module" src="index.js"></script>
 </body>
 </html>
