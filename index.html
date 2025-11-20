@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Löydä Suomen opiskelijaravintolat, suodata kaupungin ja palveluntarjoajan mukaan sekä katso päivän menu.">
+    <title>Opiskelijaravintolat Suomessa</title>
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Opiskelijaravintolat Suomessa</h1>
+            <nav aria-label="Päänavigaatio">
+                <button id="loginBtn">Kirjaudu sisään</button>
+                <button id="registerBtn">Rekisteröidy</button>
+                <button id="profileBtn" class="hidden">Profiili</button>
+                <button id="logoutBtn" class="hidden">Kirjaudu ulos</button>
+                <button id="themeToggle" aria-label="Vaihda teemaa">Dark Mode</button>
+            </nav>
+        </header>
+
+        <section class="filters">
+            <h2>Suodata ravintoloita</h2>
+            <div class="filter-group">
+                <select id="cityFilter">
+                    <option value="">Kaikki kaupungit</option>
+                </select>
+                <select id="providerFilter">
+                    <option value="">Kaikki palveluntarjoajat</option>
+                </select>
+                <input type="text" id="searchInput" placeholder="Hae ravintolaa nimellä...">
+            </div>
+        </section>
+
+        <section id="map" aria-label="Kartta opiskelijaravintoloista">
+            Kartta tulee tähän
+        </section>
+
+        <section class="restaurant-list" id="restaurantList"></section>
+
+        <section class="menu-display" id="menuDisplay">
+            <button id="closeMenu">×</button>
+            <h2 id="menuTitle"></h2>
+            <div id="menuContent"></div>
+        </section>
+
+        <section class="profile hidden" id="profileSection">
+            <h2>Omat tiedot</h2>
+            <img src="" alt="Profiilikuva" id="profilePic">
+            <input type="file" id="uploadPic" accept="image/*">
+            <input type="text" id="username" placeholder="Käyttäjätunnus">
+            <input type="email" id="email" placeholder="Sähköposti">
+            <select id="favoriteRestaurant">
+                <option value="">Valitse suosikkiravintola</option>
+            </select>
+            <button id="updateProfile">Päivitä tiedot</button>
+        </section>
+    </div>
+
+    <div class="modal" id="loginModal">
+        <div class="modal-content">
+            <span class="close" id="closeLogin">×</span>
+            <h2>Kirjaudu sisään</h2>
+            <input type="text" id="loginUser" placeholder="Käyttäjätunnus">
+            <input type="password" id="loginPass" placeholder="Salasana">
+            <button id="doLogin">Kirjaudu</button>
+        </div>
+    </div>
+
+    <div class="modal" id="registerModal">
+        <div class="modal-content">
+            <span class="close" id="closeRegister">×</span>
+            <h2>Rekisteröidy</h2>
+            <input type="text" id="regUser" placeholder="Käyttäjätunnus">
+            <input type="email" id="regEmail" placeholder="Sähköposti">
+            <input type="password" id="regPass" placeholder="Salasana">
+            <button id="doRegister">Rekisteröidy</button>
+        </div>
+    </div>
+</body>
+</html>
