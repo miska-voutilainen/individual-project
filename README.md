@@ -33,7 +33,7 @@ The application follows a modular approach using vanilla JavaScript with ES6 mod
 
 ### Technical Stack
 - **JavaScript ES6+**: Modern JavaScript with async/await, destructuring, and arrow functions
-- **Leaflet.js 1.9.4**: Open-source mapping library for interactive maps
+- **Google Maps API**: Interactive mapping with custom markers and info windows
 - **CSS3**: Modern styling with CSS Grid, Flexbox, and CSS custom properties
 - **HTML5**: Semantic markup with accessibility considerations
 - **Jest**: Testing framework with coverage reporting
@@ -68,7 +68,7 @@ The main application file (`index.js`) contains approximately 885 lines of code 
 2. **Translation System**: Multi-language support with dynamic text replacement
 3. **API Communication**: Centralized fetch wrapper with authentication and error handling
 4. **Authentication Logic**: User registration, login, logout, and profile management
-5. **Map Integration**: Leaflet.js implementation with custom markers and popups
+5. **Map Integration**: Google Maps API implementation with custom markers and info windows
 6. **Restaurant Management**: Data fetching, filtering, and display logic
 7. **UI Controllers**: Event handlers for user interactions and dynamic updates
 8. **Utility Functions**: Helper functions for data processing and UI updates
@@ -78,7 +78,7 @@ The application maintains several key state variables:
 - `restaurants`: Array of all restaurant data fetched from API
 - `currentUser`: Object containing authenticated user information
 - `token`: JWT token for API authentication
-- `map`: Leaflet map instance for geographical display
+- `map`: Google Maps instance for geographical display
 - `userLocation`: Coordinates of user's current position
 - `selectedLang`: Current language setting (Finnish/English)
 
@@ -142,10 +142,10 @@ Users can update:
 
 ## Map and Geolocation
 
-### Leaflet.js Integration
-The application uses Leaflet.js for interactive mapping:
-- **Custom Markers**: Distinctive markers for restaurants with popup information
-- **User Location**: Blue marker indicating user's current position
+### Google Maps Integration
+The application uses Google Maps API for interactive mapping:
+- **Custom Markers**: Distinctive markers for restaurants with info window information
+- **User Location**: Red marker indicating user's current position
 - **Interactive Controls**: Zoom, pan, and marker click functionality
 - **Responsive Design**: Map adapts to different screen sizes
 
@@ -701,13 +701,13 @@ The following files are excluded from version control but can be recreated using
 **index.html**: Single-page application structure with:
 - Semantic HTML5 elements for accessibility
 - Modal dialogs for login/register/profile functions
-- Map container for Leaflet.js integration
+- Map container for Google Maps integration
 - Filter controls and restaurant display areas
 
 **index.js**: Main application logic containing:
 - API communication functions with error handling
 - Authentication system implementation
-- Map integration with Leaflet.js
+- Map integration with Google Maps API
 - UI event handlers and dynamic content updates
 - Multi-language translation system
 - Local storage management for persistence
