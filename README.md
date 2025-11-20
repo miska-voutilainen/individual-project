@@ -70,7 +70,7 @@ The application follows a modular approach using vanilla JavaScript with ES6 mod
 ## Technical Implementation
 
 ### Application Structure
-The main application file (`index.js`) contains approximately 885 lines of code organized into logical sections:
+The main application file (`index.js`) contains approximately 1000 lines of code organized into logical sections:
 
 1. **Configuration and Constants**: API endpoints, global variables, and DOM element cache
 2. **Translation System**: Multi-language support with dynamic text replacement
