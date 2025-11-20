@@ -18,7 +18,7 @@ const translations = {
         cityAll: "Kaikki kaupungit", providerAll: "Kaikki palveluntarjoajat", searchPlaceholder: "Hae ravintolaa nimellä...",
         menuDay: "Päivän menu", menuWeek: "Viikon menu", nearest: "Etäisyys sinusta:", noResults: "Ei tuloksia.",
         noMenu: "Ei ruokia tänään", favSet: "Suosikkiravintola asetettu!", favFail: "Suosikin asettaminen epäonnistui",
-        fav: "Suosikki", favAdd: "Lisää suosikiksi", profileHeader: "Omat tiedot", favRestOpt: "Valitse suosikkiravintola",
+        fav: "Sinun suosikkisi", favAdd: "Lisää suosikiksi", profileHeader: "Omat tiedot", favRestOpt: "Valitse suosikkiravintola",
         updateProfile: "Päivitä tiedot", loginHeader: "Kirjaudu sisään", loginUser: "Käyttäjätunnus", loginPass: "Salasana",
         doLogin: "Kirjaudu", registerHeader: "Rekisteröidy", regUser: "Käyttäjätunnus", regEmail: "Sähköposti",
         regPass: "Salasana", doRegister: "Rekisteröidy", yourLocation: "Sinun sijaintisi", distance: "Etäisyys:",
@@ -30,7 +30,7 @@ const translations = {
         cityAll: "All cities", providerAll: "All providers", searchPlaceholder: "Search restaurant by name...",
         menuDay: "Daily menu", menuWeek: "Weekly menu", nearest: "Distance from you:", noResults: "No results.",
         noMenu: "No meals today", favSet: "Favorite restaurant set!", favFail: "Failed to set favorite",
-        fav: "Favorite", favAdd: "Add as favorite", profileHeader: "My Details", favRestOpt: "Select favorite restaurant",
+        fav: "Your favorite", favAdd: "Add as favorite", profileHeader: "My Details", favRestOpt: "Select favorite restaurant",
         updateProfile: "Update details", loginHeader: "Login", loginUser: "Username", loginPass: "Password",
         doLogin: "Login", registerHeader: "Register", regUser: "Username", regEmail: "Email",
         regPass: "Password", doRegister: "Register", yourLocation: "Your location", distance: "Distance:",
@@ -108,9 +108,25 @@ function loadProfileData() {
     if (el.email) el.email.value = currentUser.email || "";
     if (el.favoriteRestaurant) el.favoriteRestaurant.value = currentUser.favouriteRestaurant || "";
     if (el.profilePic) {
-        el.profilePic.src = currentUser.avatar
-            ? `${API_BASE}/uploads/${currentUser.avatar}`
-            : "https://via.placeholder.com/120?text=No+Avatar";
+        if (currentUser.avatar) {
+            const avatarSrc = `${API_BASE}/uploads/${currentUser.avatar}`;
+            console.log('Loading profile image:', avatarSrc);
+            
+            el.profilePic.onerror = () => {
+                console.error('Failed to load profile image:', avatarSrc);
+                el.profilePic.src = "https://via.placeholder.com/120?text=No+Avatar";
+                el.profilePic.onerror = null;
+            };
+            
+            el.profilePic.onload = () => {
+                console.log('Profile image loaded successfully');
+            };
+            
+            el.profilePic.src = avatarSrc;
+        } else {
+            console.log('No avatar set, using placeholder');
+            el.profilePic.src = "https://via.placeholder.com/120?text=No+Avatar";
+        }
     }
 }
 
@@ -173,17 +189,42 @@ function getUserLocation() {
 }
 
 async function renderMap() {
-    if (typeof L === "undefined" || !document.getElementById("map")) return;
+    if (typeof L === "undefined") {
+        console.error("Leaflet library not loaded");
+        return;
+    }
+    
     const mapEl = document.getElementById("map");
+    if (!mapEl) {
+        console.error("Map element not found");
+        return;
+    }
 
-    if (!map) {
-        mapEl.innerHTML = "";
-        map = L.map("map").setView([60.1699, 24.9384], 10);
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-    } else {
-        map.eachLayer(l => l instanceof L.Marker && map.removeLayer(l));
+    try {
+        if (!map) {
+            mapEl.innerHTML = "";
+            
+            if (!mapEl.style.height) {
+                mapEl.style.height = "460px";
+            }
+            
+            map = L.map("map").setView([60.1699, 24.9384], 10);
+            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            console.log("Map initialized successfully");
+        } else {
+            map.eachLayer(l => {
+                if (l instanceof L.Marker) {
+                    map.removeLayer(l);
+                }
+            });
+        }
+    } catch (error) {
+        console.error("Error initializing map:", error);
+        mapEl.innerHTML = `<div style="padding: 20px; text-align: center; color: red;">Map failed to load: ${error.message}</div>`;
+        return;
     }
 
     let loading = mapEl.querySelector(".map-loading");
@@ -376,10 +417,23 @@ window.showWeeklyMenu = async (id) => {
             }
         } else {
             week.days.forEach((d, i) => {
-                const dateStr = d.date
-                    ? new Date(d.date).toLocaleDateString(selectedLang === "en" ? "en-GB" : "fi-FI", { weekday: "long", day: "numeric", month: "long" })
-                    : weekdays[i % 7];
-                html += `<h4>${dateStr}</h4>`;
+                let dateStr;
+                if (d.date) {
+                    try {
+                        const date = new Date(d.date);
+                        if (isNaN(date.getTime())) {
+                            dateStr = d.date;
+                        } else {
+                            dateStr = date.toLocaleDateString(selectedLang === "en" ? "en-GB" : "fi-FI", { weekday: "long", day: "numeric", month: "long" });
+                        }
+                    } catch (error) {
+                        console.error("Date parsing error:", error, "Date string:", d.date);
+                        dateStr = d.date;
+                    }
+                } else {
+                    dateStr = weekdays[i % 7];
+                }
+                html += `<hr><h4>${dateStr}</h4><hr>`;
                 if (d.courses && Object.values(d.courses).length) {
                     html += "<ul>" + Object.values(d.courses).map(c =>
                         `<li><strong>${c.name}</strong> ${c.diets ? `<span>${c.diets}</span>` : ""} ${c.price ? `<span>${c.price}€</span>` : ""}</li>`
@@ -476,8 +530,8 @@ if (typeof document !== "undefined") {
             filterAndRender();
         });
 
-        el.cityFilter && (el.cityFilter.onchange = filterAndRender);
-        el.providerFilter && (el.providerFilter.onchange = filterAndRender);
+        el.cityFilter && (el.cityFilter.onchange = () => filterAndRender());
+        el.providerFilter && (el.providerFilter.onchange = () => filterAndRender());
         el.searchInput && (el.searchInput.oninput = () => { if (el.searchInput.value.length === 0 || el.searchInput.value.length > 2) filterAndRender(); });
 
         el.loginBtn?.addEventListener("click", () => el.loginModal.style.display = "flex");
@@ -528,15 +582,52 @@ if (typeof document !== "undefined") {
 
         el.uploadPic?.addEventListener("change", async e => {
             const file = e.target.files[0];
-            if (!file || !token) return;
+            if (!file) return;
+            
+            if (!currentUser || !token) {
+                alert('Please login first');
+                return;
+            }
+            
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file');
+                e.target.value = '';
+                return;
+            }
+            
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File too large. Please select an image under 5MB');
+                e.target.value = '';
+                return;
+            }
+            
             const form = new FormData();
             form.append("avatar", file);
+            
             try {
-                const data = await apiFetch(`${API_BASE}/users/avatar`, { method: "POST", body: form });
-                currentUser.avatar = data.data.avatar;
-                localStorage.setItem("currentUser", JSON.stringify(currentUser));
-                el.profilePic.src = `${API_BASE}/uploads/${currentUser.avatar}`;
-            } catch { }
+                console.log('Uploading avatar...');
+                const data = await apiFetch(`${API_BASE}/users/avatar`, { 
+                    method: "POST", 
+                    body: form 
+                });
+                
+                console.log('Avatar upload response:', data);
+                
+                const avatarPath = data.data?.avatar || data.avatar || data.filename;
+                if (avatarPath) {
+                    currentUser.avatar = avatarPath;
+                    localStorage.setItem("currentUser", JSON.stringify(currentUser));
+                    loadProfileData();
+                    alert('Profile picture updated successfully!');
+                } else {
+                    console.error('No avatar path in response:', data);
+                    throw new Error('Invalid response: no avatar path received');
+                }
+            } catch (error) {
+                console.error('Avatar upload failed:', error);
+                alert(`Failed to upload profile picture: ${error.message}`);
+                e.target.value = '';
+            }
         });
 
         el.closeMenu?.addEventListener("click", () => {
