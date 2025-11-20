@@ -197,13 +197,28 @@ html.dark #map {
 
 /* Custom info window content styling */
 .gm-style .gm-style-iw-c {
-    border-radius: 12px !important;
+    border-radius: 8px !important;
     box-shadow: 0 4px 16px rgba(0,0,0,0.2) !important;
+    padding: 0 !important;
 }
 
 .gm-style .gm-style-iw-d {
-    font-size: 0.95rem !important;
-    line-height: 1.5 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Style the close button */
+.gm-style .gm-style-iw-t::after {
+    background: #666 !important;
+    border-radius: 50% !important;
+    width: 22px !important;
+    height: 22px !important;
+    opacity: 0.8 !important;
+}
+
+.gm-style .gm-style-iw-t::after:hover {
+    opacity: 1 !important;
+    background: #333 !important;
 }
 
 .menu-popup-buttons {
@@ -251,6 +266,32 @@ html.dark .restaurant-card p {
 .favorite-highlight {
     border: 3px solid #ffc107 !important;
     box-shadow: 0 0 16px #ffc10744 !important;
+    background: #fffbf0 !important;
+    position: relative;
+}
+
+html.dark .favorite-highlight {
+    background: #2d2a1f !important;
+}
+
+.favorite-star {
+    position: absolute !important;
+    top: 4px !important;
+    right: 8px !important;
+    width: 32px;
+    height: 32px;
+    background: #ffc107;
+    color: #333;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: bold;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    z-index: 10;
+    border: 2px solid #fff;
+    line-height: 1;
 }
 
 .nearest {
@@ -298,8 +339,9 @@ html.dark .restaurant-card p {
     flex-wrap: wrap;
 }
 
-.menu-options button:first-child { background: #28a745; color: white; }
-.menu-options button:last-child { background: #ffb74d; color: #333; }
+.daily-menu-btn { background: #007cba !important; color: white !important; }
+.weekly-menu-btn { background: #28a745 !important; color: white !important; }
+.directions-btn { background: #dc3545 !important; color: white !important; }
 
 .menu-btn:hover { opacity: 0.9; transform: translateY(-1px); }
 
@@ -320,6 +362,25 @@ html.dark .restaurant-card p {
     z-index: 2000;
 }
 
+.menu-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1500;
+    backdrop-filter: blur(2px);
+}
+
+.menu-overlay.active {
+    display: block;
+}
+
+.map-disabled {
+    pointer-events: none;
+    filter: grayscale(50%) brightness(0.7);
+    transition: filter 0.3s ease;
+}
+
 html.dark .menu-display {
     background: #1e1e1e !important;
 }
@@ -328,13 +389,14 @@ html.dark .menu-display {
     position: absolute;
     top: 16px;
     right: 20px;
+    padding: 2px;
     background: #dc3545;
     color: white;
     border: none;
     width: 44px;
     height: 44px;
     border-radius: 50%;
-    font-size: 1.6rem;
+    font-size: 2rem;
     cursor: pointer;
     transition: background 0.2s;
 }

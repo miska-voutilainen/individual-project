@@ -67,9 +67,10 @@ const translations = {
         noMenu: "Ei ruokia tänään", favSet: "Suosikkiravintola asetettu!", favFail: "Suosikin asettaminen epäonnistui",
         fav: "Sinun suosikkisi", favAdd: "Lisää suosikiksi", profileHeader: "Omat tiedot", favRestOpt: "Valitse suosikkiravintola",
         updateProfile: "Päivitä tiedot", loginHeader: "Kirjaudu sisään", loginUser: "Käyttäjätunnus", loginPass: "Salasana",
-        doLogin: "Kirjaudu", registerHeader: "Rekisteröidy", regUser: "Käyttäjätunnus", regEmail: "Sähköposti",
-        regPass: "Salasana", doRegister: "Rekisteröidy", yourLocation: "Sinun sijaintisi", distance: "Etäisyys:",
-        loadingRestaurants: "Ladataan ravintoloita...", loadingMap: "Ladataan karttaa...", updatingMap: "Päivitetään karttaa..."
+        doLogin: "Kirjaudu", registerHeader: "Rekisteröidy", regUser: "Käyttäjätunnus",
+        regPass: "Salasana", regPassConfirm: "Vahvista salasana", doRegister: "Rekisteröidy", yourLocation: "Sinun sijaintisi", distance: "Etäisyys:",
+        loadingRestaurants: "Ladataan ravintoloita...", loadingMap: "Ladataan karttaa...", updatingMap: "Päivitetään karttaa...",
+        directions: "Reittiohjeet", regSuccess: "Rekisteröityminen onnistui!", passwordTooShort: "Salasana vähintään 6 merkkiä", passwordMismatch: "Salasanat eivät täsmää", invalidUsername: "Käyttäjätunnus saa sisältää vain kirjaimia, numeroita, viivoja ja alaviivoja (3-20 merkkiä)", profileUpdated: "Profiili päivitetty!", invalidUsername: "Käyttäjätunnus saa sisältää vain kirjaimia, numeroita, viivoja ja alaviivoja (3-20 merkkiä)"
     },
     en: {
         login: "Login", register: "Register", profile: "Profile", logout: "Logout",
@@ -79,9 +80,10 @@ const translations = {
         noMenu: "No meals today", favSet: "Favorite restaurant set!", favFail: "Failed to set favorite",
         fav: "Your favorite", favAdd: "Add as favorite", profileHeader: "My Details", favRestOpt: "Select favorite restaurant",
         updateProfile: "Update details", loginHeader: "Login", loginUser: "Username", loginPass: "Password",
-        doLogin: "Login", registerHeader: "Register", regUser: "Username", regEmail: "Email",
-        regPass: "Password", doRegister: "Register", yourLocation: "Your location", distance: "Distance:",
-        loadingRestaurants: "Loading restaurants...", loadingMap: "Loading map...", updatingMap: "Updating map..."
+        doLogin: "Login", registerHeader: "Register", regUser: "Username",
+        regPass: "Password", regPassConfirm: "Confirm password", doRegister: "Register", yourLocation: "Your location", distance: "Distance:",
+        loadingRestaurants: "Loading restaurants...", loadingMap: "Loading map...", updatingMap: "Updating map...",
+        directions: "Directions", regSuccess: "Registration successful!", passwordTooShort: "Password must be at least 6 characters", passwordMismatch: "Passwords do not match", invalidUsername: "Username can only contain letters, numbers, hyphens and underscores (3-20 characters)", profileUpdated: "Profile updated!", invalidUsername: "Username can only contain letters, numbers, hyphens and underscores (3-20 characters)"
     }
 };
 
@@ -92,6 +94,19 @@ const translations = {
  * @returns {string} Translated text in selected language, falls back to Finnish, then key itself
  */
 const t = (key) => translations[selectedLang][key] || translations.fi[key] || key;
+
+/**
+ * @function isValidUsername
+ * @description Validates username to prevent SQL injection and ensure security
+ * @param {string} username - Username to validate
+ * @returns {boolean} True if username is valid, false otherwise
+ */
+const isValidUsername = (username) => {
+    // Only allow alphanumeric characters, underscores, and hyphens
+    // Length between 3-20 characters
+    const usernameRegex = /^[a-zA-Z0-9_-]{3,20}$/;
+    return usernameRegex.test(username);
+};
 
 /**
  * @async
@@ -212,7 +227,6 @@ function loadProfileData() {
     
     // Populate form fields with user data
     if (el.username) el.username.value = currentUser.username || "";
-    if (el.email) el.email.value = currentUser.email || "";
     if (el.favoriteRestaurant) el.favoriteRestaurant.value = currentUser.favouriteRestaurant || "";
     
     // Load profile picture with error handling and CORS support
@@ -289,7 +303,7 @@ function updateUILanguage(lang) {
 
     document.getElementById("loginHeader") && (document.getElementById("loginHeader").textContent = tr.loginHeader);
     document.getElementById("registerHeader") && (document.getElementById("registerHeader").textContent = tr.registerHeader);
-    ["loginUser", "loginPass", "regUser", "regEmail", "regPass"].forEach(id => {
+    ["loginUser", "loginPass", "regUser", "regPass", "regPassConfirm"].forEach(id => {
         if (el[id]) el[id].placeholder = tr[id] || "";
     });
     if (el.doLogin) el.doLogin.textContent = tr.doLogin;
@@ -421,9 +435,17 @@ async function renderMap() {
         });
         
         userMarker.addListener('click', () => {
+            // Close all other info windows
+            markers.forEach(m => {
+                if (m.infoWindow) {
+                    m.infoWindow.close();
+                }
+            });
             userInfoWindow.open(map, userMarker);
         });
         
+        // Store the info window reference
+        userMarker.infoWindow = userInfoWindow;
         markers.push(userMarker);
         
         // Open user location info window by default
@@ -452,13 +474,18 @@ async function renderMap() {
         });
 
         const popupHTML = `
-            <div style="padding: 10px; max-width: 250px;">
-                <strong>${r.name}</strong><br>
-                ${r.address}<br>
-                ${dist ? `${t("distance")} ${dist} km<br>` : ""}
-                <div style="margin-top: 10px;">
-                    <button class="menu-btn" onclick="window.showDailyMenu('${r._id}')" style="margin-right: 5px; padding: 5px 10px; background: #007cba; color: white; border: none; border-radius: 3px; cursor: pointer;">${t("menuDay")}</button>
-                    <button class="menu-btn" onclick="window.showWeeklyMenu('${r._id}')" style="padding: 5px 10px; background: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer;">${t("menuWeek")}</button>
+            <div style="padding: 5px; max-width: 250px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #333;">${r.name}</h3>
+                </div>
+                <div style="font-size: 0.9rem; color: #666; margin-bottom: 8px;">
+                    ${r.address}<br>
+                    ${dist ? `${t("distance")} ${dist} km` : ""}
+                </div>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <button onclick="window.showDailyMenu('${r._id}')" style="padding: 6px 10px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">${t("menuDay")}</button>
+                    <button onclick="window.showWeeklyMenu('${r._id}')" style="padding: 6px 10px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">${t("menuWeek")}</button>
+                    <button onclick="window.getDirections('${r._id}')" style="padding: 6px 10px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem;">${t("directions")}</button>
                 </div>
             </div>`;
         
@@ -467,7 +494,7 @@ async function renderMap() {
         });
         
         marker.addListener('click', () => {
-            // Close all other info windows
+            // Close all other info windows including user location
             markers.forEach(m => {
                 if (m.infoWindow) {
                     m.infoWindow.close();
@@ -515,7 +542,9 @@ async function renderRestaurants(list = restaurants) {
     sorted.forEach(r => {
         const card = document.createElement("div");
         card.className = "restaurant-card";
-        if (currentUser?.favouriteRestaurant === r._id) card.classList.add("favorite-highlight");
+        if (currentUser?.favouriteRestaurant === r._id) {
+            card.classList.add("favorite-highlight");
+        }
 
         let distanceHTML = "";
         if (loc && r.location?.coordinates) {
@@ -534,7 +563,11 @@ async function renderRestaurants(list = restaurants) {
         const cityLabel = selectedLang === "en" ? "City:" : "Kaupunki:";
         const providerLabel = selectedLang === "en" ? "Provider:" : "Palveluntarjoaja:";
 
+        const isFavorite = currentUser?.favouriteRestaurant === r._id;
+        const starHTML = isFavorite ? `<div class="favorite-star">★</div>` : '';
+
         card.innerHTML = `
+            ${starHTML}
             <h3>${r.name}</h3>
             <p><strong>${addressLabel}</strong> ${r.address}</p>
             <p><strong>${cityLabel}</strong> ${r.city}</p>
@@ -542,8 +575,9 @@ async function renderRestaurants(list = restaurants) {
             ${distanceHTML}
             ${favBtn}
             <div class="menu-options">
-                <button class="menu-btn" onclick="window.showDailyMenu('${r._id}')">${t("menuDay")}</button>
-                <button class="menu-btn" onclick="window.showWeeklyMenu('${r._id}')">${t("menuWeek")}</button>
+                <button class="menu-btn daily-menu-btn" onclick="window.showDailyMenu('${r._id}')">${t("menuDay")}</button>
+                <button class="menu-btn weekly-menu-btn" onclick="window.showWeeklyMenu('${r._id}')">${t("menuWeek")}</button>
+                <button class="menu-btn directions-btn" onclick="window.getDirections('${r._id}')">${t("directions")}</button>
             </div>`;
         el.restaurantList.appendChild(card);
     });
@@ -632,6 +666,37 @@ window.setFavoriteRestaurant = async (id) => {
 };
 
 /**
+ * @function getDirections
+ * @description Opens Google Maps with directions from user's location to restaurant
+ * @param {string} id - Restaurant ID to get directions to
+ * @global
+ */
+window.getDirections = (id) => {
+    const restaurant = restaurants.find(r => r._id === id);
+    if (!restaurant || !restaurant.location?.coordinates) {
+        alert(selectedLang === "en" ? "Restaurant location not available" : "Ravintolan sijaintia ei ole saatavilla");
+        return;
+    }
+    
+    const [lng, lat] = restaurant.location.coordinates;
+    const destination = `${lat},${lng}`;
+    
+    // Create Google Maps directions URL
+    let directionsUrl = `https://www.google.com/maps/dir/`;
+    
+    // Add user's current location as starting point if available
+    if (userLocation) {
+        directionsUrl += `${userLocation.lat},${userLocation.lng}/`;
+    }
+    
+    // Add destination
+    directionsUrl += `${destination}`;
+    
+    // Open in new tab
+    window.open(directionsUrl, '_blank');
+};
+
+/**
  * @async
  * @function displayMenu
  * @description Displays restaurant menu in a modal popup
@@ -648,6 +713,20 @@ async function displayMenu(title, content) {
     );
     el.menuDisplay.style.display = "block";
     document.body.style.overflow = "hidden";
+    
+    // Add overlay and disable map interaction
+    if (!el.menuOverlay) {
+        el.menuOverlay = document.createElement('div');
+        el.menuOverlay.className = 'menu-overlay';
+        document.body.appendChild(el.menuOverlay);
+    }
+    el.menuOverlay.classList.add('active');
+    
+    // Gray out and disable map
+    const mapElement = document.getElementById('map');
+    if (mapElement) {
+        mapElement.classList.add('map-disabled');
+    }
 }
 
 /**
@@ -817,13 +896,12 @@ if (typeof document !== "undefined") {
             loginUser: document.getElementById("loginUser"),
             loginPass: document.getElementById("loginPass"),
             regUser: document.getElementById("regUser"),
-            regEmail: document.getElementById("regEmail"),
             regPass: document.getElementById("regPass"),
+            regPassConfirm: document.getElementById("regPassConfirm"),
             profileSection: document.getElementById("profileSection"),
             profilePic: document.getElementById("profilePic"),
             uploadPic: document.getElementById("uploadPic"),
             username: document.getElementById("username"),
-            email: document.getElementById("email"),
             favoriteRestaurant: document.getElementById("favoriteRestaurant"),
             updateProfile: document.getElementById("updateProfile"),
             scrollToTop: document.getElementById("scrollToTop")
@@ -864,21 +942,27 @@ if (typeof document !== "undefined") {
         });
 
         el.doRegister?.addEventListener("click", async () => {
-            const u = el.regUser.value.trim(), e = el.regEmail.value.trim(), p = el.regPass.value;
-            if (!u || !e || !p) return alert("Täytä kaikki kentät");
-            if (p.length < 6) return alert("Salasana vähintään 6 merkkiä");
+            const u = el.regUser.value.trim(), p = el.regPass.value, pc = el.regPassConfirm.value;
+            if (!u || !p || !pc) return alert(t("fillAllFields"));
+            if (!isValidUsername(u)) return alert(t("invalidUsername"));
+            if (p.length < 6) return alert(t("passwordTooShort"));
+            if (p !== pc) return alert(t("passwordMismatch"));
             try {
-                await apiFetch(`${API_BASE}/users`, { method: "POST", body: JSON.stringify({ username: u, email: e, password: p }) });
-                alert("Rekisteröityminen onnistui! Tarkista sähköpostisi.");
+                await apiFetch(`${API_BASE}/users`, { method: "POST", body: JSON.stringify({ username: u, email: `${u}@placeholder.local`, password: p }) });
+                // Automatically log in the newly registered user
+                const loginData = await apiFetch(`${API_BASE}/auth/login`, { method: "POST", body: JSON.stringify({ username: u, password: p }) });
+                saveAuth(loginData.data, loginData.token);
+                alert(t("regSuccess"));
                 el.registerModal.style.display = "none";
-                // Reload page to show login form and updated UI
+                // Reload page to show authenticated UI
                 window.location.reload();
             } catch { }
         });
 
         el.doLogin?.addEventListener("click", async () => {
             const u = el.loginUser.value.trim(), p = el.loginPass.value;
-            if (!u || !p) return alert("Täytä kentät");
+            if (!u || !p) return alert(t("fillAllFields"));
+            if (!isValidUsername(u)) return alert(t("invalidUsername"));
             try {
                 const data = await apiFetch(`${API_BASE}/auth/login`, { method: "POST", body: JSON.stringify({ username: u, password: p }) });
                 saveAuth(data.data, data.token);
@@ -891,14 +975,13 @@ if (typeof document !== "undefined") {
         el.updateProfile?.addEventListener("click", async () => {
             if (!token) return;
             const updates = {
-                email: el.email.value.trim(),
                 favouriteRestaurant: el.favoriteRestaurant.value || null
             };
             try {
                 await apiFetch(`${API_BASE}/users`, { method: "PUT", body: JSON.stringify(updates) });
                 Object.assign(currentUser, updates);
                 localStorage.setItem("currentUser", JSON.stringify(currentUser));
-                alert("Profiili päivitetty");
+                alert(t("profileUpdated"));
                 filterAndRender();
             } catch { }
         });
@@ -956,6 +1039,16 @@ if (typeof document !== "undefined") {
         el.closeMenu?.addEventListener("click", () => {
             el.menuDisplay.style.display = "none";
             document.body.style.overflow = "";
+            
+            // Remove overlay and re-enable map
+            if (el.menuOverlay) {
+                el.menuOverlay.classList.remove('active');
+            }
+            
+            const mapElement = document.getElementById('map');
+            if (mapElement) {
+                mapElement.classList.remove('map-disabled');
+            }
         });
 
         el.logoutBtn?.addEventListener("click", () => {
