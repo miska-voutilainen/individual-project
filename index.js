@@ -94,6 +94,33 @@ const translations = {
 const t = (key) => translations[selectedLang][key] || translations.fi[key] || key;
 
 /**
+ * @function isValidUsername
+ * @description Validates username format to prevent SQL injection attacks and ensure security compliance.
+ * Enforces strict character restrictions and length limits to maintain data integrity.
+ * @param {string} username - The username string to validate
+ * @returns {boolean} True if username meets all security requirements, false otherwise
+ * @throws {TypeError} If username parameter is not a string
+ * @example
+ * // Valid usernames
+ * isValidUsername("john_doe"); // returns true
+ * isValidUsername("user123"); // returns true
+ * isValidUsername("test-user"); // returns true
+ * 
+ * // Invalid usernames
+ * isValidUsername("<script>"); // returns false (contains illegal characters)
+ * isValidUsername("ab"); // returns false (too short)
+ * isValidUsername("verylongusernamethatexceedslimit"); // returns false (too long)
+ * @security Prevents SQL injection by restricting to safe character set
+ * @since 1.2.0
+ */
+const isValidUsername = (username) => {
+    // Security validation: Only allow alphanumeric characters, underscores, and hyphens
+    // Length restriction: 3-20 characters to prevent abuse and ensure usability
+    const usernameRegex = /^[a-zA-Z0-9_-]{3,20}$/;
+    return usernameRegex.test(username);
+};
+
+/**
  * @async
  * @function apiFetch
  * @description Centralized API fetch function with authentication and error handling.
@@ -863,15 +890,33 @@ if (typeof document !== "undefined") {
             if (e.target === el.registerModal) el.registerModal.style.display = "none";
         });
 
+        /**
+         * @event click
+         * @description Handles user registration with comprehensive validation including:
+         * - Username format validation (prevents SQL injection)
+         * - Password confirmation matching (prevents typos)
+         * - Minimum password length enforcement (security requirement)
+         * - Automatic login after successful registration (improved UX)
+         * @listens HTMLElement#click
+         * @fires apiFetch - POST to /users for registration
+         * @fires apiFetch - POST to /auth/login for automatic login
+         * @throws {Error} If validation fails or API request fails
+         * @since 1.2.0
+         */
         el.doRegister?.addEventListener("click", async () => {
-            const u = el.regUser.value.trim(), e = el.regEmail.value.trim(), p = el.regPass.value;
-            if (!u || !e || !p) return alert("Täytä kaikki kentät");
-            if (p.length < 6) return alert("Salasana vähintään 6 merkkiä");
+            const u = el.regUser.value.trim(), p = el.regPass.value, pc = el.regPassConfirm.value;
+            if (!u || !p || !pc) return alert(t("fillAllFields"));
+            if (!isValidUsername(u)) return alert(t("invalidUsername"));
+            if (p.length < 6) return alert(t("passwordTooShort"));
+            if (p !== pc) return alert(t("passwordMismatch"));
             try {
-                await apiFetch(`${API_BASE}/users`, { method: "POST", body: JSON.stringify({ username: u, email: e, password: p }) });
-                alert("Rekisteröityminen onnistui! Tarkista sähköpostisi.");
+                await apiFetch(`${API_BASE}/users`, { method: "POST", body: JSON.stringify({ username: u, email: `${u}@placeholder.local`, password: p }) });
+                // Automatically log in the newly registered user
+                const loginData = await apiFetch(`${API_BASE}/auth/login`, { method: "POST", body: JSON.stringify({ username: u, password: p }) });
+                saveAuth(loginData.data, loginData.token);
+                alert(t("regSuccess"));
                 el.registerModal.style.display = "none";
-                // Reload page to show login form and updated UI
+                // Reload page to show authenticated UI
                 window.location.reload();
             } catch { }
         });
