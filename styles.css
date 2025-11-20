@@ -186,14 +186,22 @@ html.dark #map {
     margin-left: 12px;
 }
 
-.leaflet-popup-content-wrapper {
-    max-width: 90vw !important;
+/* Google Maps Info Window Styles */
+.gm-ui-hover-effect {
+    opacity: 0.6 !important;
+}
+
+.gm-ui-hover-effect:hover {
+    opacity: 1 !important;
+}
+
+/* Custom info window content styling */
+.gm-style .gm-style-iw-c {
     border-radius: 12px !important;
     box-shadow: 0 4px 16px rgba(0,0,0,0.2) !important;
 }
 
-.leaflet-popup-content {
-    margin: 14px !important;
+.gm-style .gm-style-iw-d {
     font-size: 0.95rem !important;
     line-height: 1.5 !important;
 }
