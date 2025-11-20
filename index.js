@@ -13,7 +13,7 @@
  * 
  * ## Tech Stack
  * - Vanilla JavaScript (ES6 modules)
- * - Leaflet.js for interactive maps
+ * - Google Maps API for interactive maps
  * - REST API integration
  * - LocalStorage for authentication
  * - Responsive CSS with CSS Grid/Flexbox
@@ -34,8 +34,11 @@ let currentUser = null;
 /** @type {string|null} token - Authentication token for API requests */
 let token = null;
 
-/** @type {Object|null} map - Leaflet map instance */
+/** @type {Object|null} map - Google Maps instance */
 let map = null;
+
+/** @type {Array} markers - Array to store Google Maps markers */
+let markers = [];
 
 /** @type {Object|null} userLocation - User's geographical location {lat, lng} */
 let userLocation = null;
@@ -212,26 +215,46 @@ function loadProfileData() {
     if (el.email) el.email.value = currentUser.email || "";
     if (el.favoriteRestaurant) el.favoriteRestaurant.value = currentUser.favouriteRestaurant || "";
     
-    // Load profile picture with error handling
+    // Load profile picture with error handling and CORS support
     if (el.profilePic) {
         if (currentUser.avatar) {
+            // Try to fetch the image with credentials to handle CORS
             const avatarSrc = `${API_BASE}/uploads/${currentUser.avatar}`;
             console.log('Loading profile image:', avatarSrc);
             
-            el.profilePic.onerror = () => {
-                console.error('Failed to load profile image:', avatarSrc);
-                el.profilePic.src = "https://via.placeholder.com/120?text=No+Avatar";
+            // First try to fetch the image to check if it's accessible
+            fetch(avatarSrc, {
+                method: 'GET',
+                headers: {
+                    'Authorization': token ? `Bearer ${token}` : ''
+                },
+                mode: 'cors'
+            }).then(response => {
+                if (response.ok) {
+                    // If fetch is successful, set the image src
+                    el.profilePic.onload = () => {
+                        console.log('Profile image loaded successfully');
+                    };
+                    
+                    el.profilePic.onerror = () => {
+                        console.error('Failed to load profile image after successful fetch:', avatarSrc);
+                        el.profilePic.src = "https://via.placeholder.com/120x120/007bff/ffffff?text=Avatar";
+                        el.profilePic.onerror = null;
+                    };
+                    
+                    el.profilePic.src = avatarSrc;
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            }).catch(error => {
+                console.error('CORS or network error loading profile image:', error);
+                console.log('Using placeholder avatar due to CORS/network issues');
+                el.profilePic.src = "https://via.placeholder.com/120x120/007bff/ffffff?text=Avatar";
                 el.profilePic.onerror = null;
-            };
-            
-            el.profilePic.onload = () => {
-                console.log('Profile image loaded successfully');
-            };
-            
-            el.profilePic.src = avatarSrc;
+            });
         } else {
             console.log('No avatar set, using placeholder');
-            el.profilePic.src = "https://via.placeholder.com/120?text=No+Avatar";
+            el.profilePic.src = "https://via.placeholder.com/120x120/007bff/ffffff?text=No+Avatar";
         }
     }
 }
@@ -321,12 +344,13 @@ function getUserLocation() {
 /**
  * @async
  * @function renderMap
- * @description Initializes and renders the Leaflet map with restaurant markers
+ * @description Initializes and renders the Google Map with restaurant markers
  */
 async function renderMap() {
-    // Check if Leaflet library is loaded
-    if (typeof L === "undefined") {
-        console.error("Leaflet library not loaded");
+    // Check if Google Maps API is loaded
+    if (typeof google === "undefined" || !google.maps) {
+        console.error("Google Maps API not loaded");
+        setTimeout(() => renderMap(), 1000); // Retry after 1 second
         return;
     }
     
@@ -344,18 +368,25 @@ async function renderMap() {
                 mapEl.style.height = "460px";
             }
             
-            map = L.map("map").setView([60.1699, 24.9384], 10);
-            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(map);
-            
-            console.log("Map initialized successfully");
-        } else {
-            map.eachLayer(l => {
-                if (l instanceof L.Marker) {
-                    map.removeLayer(l);
-                }
+            // Initialize Google Map centered on Helsinki, Finland
+            map = new google.maps.Map(mapEl, {
+                center: { lat: 60.1699, lng: 24.9384 },
+                zoom: 10,
+                mapTypeId: google.maps.MapTypeId.ROADMAP,
+                styles: [
+                    {
+                        featureType: "poi",
+                        elementType: "labels",
+                        stylers: [{ visibility: "off" }]
+                    }
+                ]
             });
+            
+            console.log("Google Map initialized successfully");
+        } else {
+            // Clear existing markers
+            markers.forEach(marker => marker.setMap(null));
+            markers = [];
         }
     } catch (error) {
         console.error("Error initializing map:", error);
@@ -373,16 +404,33 @@ async function renderMap() {
 
     const loc = await getUserLocation();
 
+    // Add user location marker
     if (loc) {
-        L.marker([loc.lat, loc.lng], {
-            icon: L.icon({
-                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-                shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-                iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
-            })
-        }).addTo(map).bindPopup(t("yourLocation")).openPopup();
+        const userMarker = new google.maps.Marker({
+            position: { lat: loc.lat, lng: loc.lng },
+            map: map,
+            title: t("yourLocation"),
+            icon: {
+                url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                scaledSize: new google.maps.Size(32, 32)
+            }
+        });
+        
+        const userInfoWindow = new google.maps.InfoWindow({
+            content: `<div style="padding: 5px;"><strong>${t("yourLocation")}</strong></div>`
+        });
+        
+        userMarker.addListener('click', () => {
+            userInfoWindow.open(map, userMarker);
+        });
+        
+        markers.push(userMarker);
+        
+        // Open user location info window by default
+        userInfoWindow.open(map, userMarker);
     }
 
+    // Add restaurant markers
     restaurants.forEach(r => {
         if (!r.location?.coordinates) return;
         const [lng, lat] = r.location.coordinates;
@@ -390,25 +438,46 @@ async function renderMap() {
 
         const isFav = currentUser?.favouriteRestaurant === r._id;
         const iconUrl = isFav
-            ? 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png'
-            : 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png';
+            ? 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png'
+            : 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png';
 
-        const marker = L.marker([lat, lng], {
-            icon: L.icon({
-                iconUrl,
-                shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-                iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
-            })
-        }).addTo(map);
+        const marker = new google.maps.Marker({
+            position: { lat: lat, lng: lng },
+            map: map,
+            title: r.name,
+            icon: {
+                url: iconUrl,
+                scaledSize: new google.maps.Size(32, 32)
+            }
+        });
 
         const popupHTML = `
-            <b>${r.name}</b><br>${r.address}<br>
-            ${dist ? `${t("distance")} ${dist} km<br>` : ""}
-            <div class="menu-popup-buttons">
-                <button class="menu-btn" onclick="window.showDailyMenu('${r._id}')">${t("menuDay")}</button>
-                <button class="menu-btn" onclick="window.showWeeklyMenu('${r._id}')">${t("menuWeek")}</button>
+            <div style="padding: 10px; max-width: 250px;">
+                <strong>${r.name}</strong><br>
+                ${r.address}<br>
+                ${dist ? `${t("distance")} ${dist} km<br>` : ""}
+                <div style="margin-top: 10px;">
+                    <button class="menu-btn" onclick="window.showDailyMenu('${r._id}')" style="margin-right: 5px; padding: 5px 10px; background: #007cba; color: white; border: none; border-radius: 3px; cursor: pointer;">${t("menuDay")}</button>
+                    <button class="menu-btn" onclick="window.showWeeklyMenu('${r._id}')" style="padding: 5px 10px; background: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer;">${t("menuWeek")}</button>
+                </div>
             </div>`;
-        marker.bindPopup(popupHTML);
+        
+        const infoWindow = new google.maps.InfoWindow({
+            content: popupHTML
+        });
+        
+        marker.addListener('click', () => {
+            // Close all other info windows
+            markers.forEach(m => {
+                if (m.infoWindow) {
+                    m.infoWindow.close();
+                }
+            });
+            infoWindow.open(map, marker);
+        });
+        
+        marker.infoWindow = infoWindow;
+        markers.push(marker);
     });
 
     setTimeout(() => loading.remove(), 400);
@@ -682,10 +751,13 @@ function populateFilters() {
     const cities = [...new Set(restaurants.map(r => r.city))].sort();
     const companies = [...new Set(restaurants.map(r => r.company))].sort();
 
-    [el.cityFilter, el.providerFilter].forEach(sel => {
-        while (sel.options.length > 1) sel.remove(1);
-        sel.options[0].text = selectedLang === "en" ? "All cities" : "Kaikki kaupungit";
-    });
+    // Clear and update city filter
+    while (el.cityFilter.options.length > 1) el.cityFilter.remove(1);
+    el.cityFilter.options[0].text = selectedLang === "en" ? "All cities" : "Kaikki kaupungit";
+    
+    // Clear and update provider filter
+    while (el.providerFilter.options.length > 1) el.providerFilter.remove(1);
+    el.providerFilter.options[0].text = selectedLang === "en" ? "All providers" : "Kaikki palveluntarjoajat";
     el.favoriteRestaurant.length = 1;
 
     cities.forEach(c => el.cityFilter.add(new Option(c, c)));

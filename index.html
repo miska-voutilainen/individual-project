@@ -19,10 +19,8 @@
     <!-- Favicon (empty to prevent 404 errors) -->
     <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     
-    <!-- External Dependencies: Leaflet CSS for interactive maps -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-          integrity="sha256-sA+zWATbFveLLNqHNCLzX3Js50qqXi+jrQ7Dc7RZ6LI="
-          crossorigin=""/>
+    <!-- Google Maps API -->
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDxzFxoweMBFo4QvmAhQKdldL8xc81Cl5M&libraries=places,geometry"></script>
 
     <!-- Custom CSS styles -->
     <link rel="stylesheet" href="styles.css">
@@ -73,7 +71,7 @@
             </div>
         </section>
 
-        <!-- Interactive Leaflet map container -->
+        <!-- Interactive Google Maps container -->
         <div id="map" aria-label="Kartta opiskelijaravintoloista"></div>
 
         <!-- Restaurant cards grid container (populated dynamically) -->
@@ -134,10 +132,7 @@
         </div>
     </div>
 
-    <!-- External Dependencies: Leaflet JavaScript for interactive maps -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-            crossorigin=""></script>
+
 
     <!-- Main application JavaScript (ES6 module) -->
     <script type="module" src="index.js"></script>
