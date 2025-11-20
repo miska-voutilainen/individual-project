@@ -825,7 +825,8 @@ if (typeof document !== "undefined") {
             username: document.getElementById("username"),
             email: document.getElementById("email"),
             favoriteRestaurant: document.getElementById("favoriteRestaurant"),
-            updateProfile: document.getElementById("updateProfile")
+            updateProfile: document.getElementById("updateProfile"),
+            scrollToTop: document.getElementById("scrollToTop")
         };
     }
 
@@ -965,6 +966,16 @@ if (typeof document !== "undefined") {
         el.profileBtn?.addEventListener("click", () => {
             el.profileSection?.classList.remove("hidden");
             el.profileSection?.scrollIntoView({ behavior: "smooth" });
+            // Show scroll to top button when profile is opened
+            el.scrollToTop?.classList.remove("hidden");
+        });
+        
+        el.scrollToTop?.addEventListener("click", () => {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            // Hide the scroll to top button after scrolling
+            setTimeout(() => {
+                el.scrollToTop?.classList.add("hidden");
+            }, 500);
         });
     }
 
