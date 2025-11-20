@@ -65,6 +65,7 @@ The application follows a modular approach using vanilla JavaScript with ES6 mod
 - **Error Handling**: Comprehensive error messages and fallback behaviors
 - **Accessibility**: Semantic HTML structure with keyboard navigation support
 - **Performance Optimization**: Efficient DOM manipulation and API call management
+- **Scroll-to-Top Navigation**: Floating button appears when viewing profile section for easy return to top
 
 ## Technical Implementation
 
