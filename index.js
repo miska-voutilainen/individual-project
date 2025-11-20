@@ -1,16 +1,60 @@
+/**
+ * @fileoverview Student Restaurant Finder - Main Application
+ * @description  Interactive web application for finding student restaurants in Finland.
+ * 
+ * ## Features
+ * -  Interactive map with restaurant locations
+ * -  Mobile-responsive design with dark/light themes
+ * -  User authentication and profiles
+ * -  Favorite restaurant management
+ * -  Multi-language support (Finnish/English)
+ * -  Geolocation-based restaurant discovery
+ * -  Real-time menu information
+ * 
+ * ## Tech Stack
+ * - Vanilla JavaScript (ES6 modules)
+ * - Leaflet.js for interactive maps
+ * - REST API integration
+ * - LocalStorage for authentication
+ * - Responsive CSS with CSS Grid/Flexbox
+ * 
+ * @author Miska Voutilainen
+ * @version 1.0.0
+ */
+
+/** @constant {string} API_BASE - Base URL for the restaurant API */
 const API_BASE = "https://media2.edu.metropolia.fi/restaurant/api/v1";
+
+/** @type {Array<Object>} restaurants - Array of restaurant objects */
 let restaurants = [];
+
+/** @type {Object|null} currentUser - Currently authenticated user object */
 let currentUser = null;
+
+/** @type {string|null} token - Authentication token for API requests */
 let token = null;
+
+/** @type {Object|null} map - Leaflet map instance */
 let map = null;
+
+/** @type {Object|null} userLocation - User's geographical location {lat, lng} */
 let userLocation = null;
+
+/** @constant {Function} matchMedia - Media query matcher with fallback for server-side */
 const matchMedia = typeof window !== "undefined" && window.matchMedia
     ? window.matchMedia
     : () => ({ matches: false, addListener: () => {}, removeListener: () => {} });
 
+/** @type {Object} el - DOM element cache for performance */
 let el = {};
+
+/** @type {string} selectedLang - Currently selected language (fi/en) */
 let selectedLang = "fi";
 
+/**
+ * @constant {Object} translations - Multilingual text translations
+ * @description Contains Finnish and English translations for all UI text
+ */
 const translations = {
     fi: {
         login: "Kirjaudu sisään", register: "Rekisteröidy", profile: "Profiili", logout: "Kirjaudu ulos",
@@ -38,15 +82,50 @@ const translations = {
     }
 };
 
+/**
+ * @function t
+ * @description Translation function that returns localized text
+ * @param {string} key - Translation key to lookup
+ * @returns {string} Translated text in selected language, falls back to Finnish, then key itself
+ */
 const t = (key) => translations[selectedLang][key] || translations.fi[key] || key;
 
+/**
+ * @async
+ * @function apiFetch
+ * @description Centralized API fetch function with authentication and error handling.
+ * Automatically includes authentication token and handles common errors.
+ * @param {string} url - The API endpoint URL to fetch from
+ * @param {Object} [options={}] - Fetch options object
+ * @param {string} [options.method='GET'] - HTTP method (GET, POST, PUT, DELETE)
+ * @param {Object} [options.headers] - Additional headers to include
+ * @param {string|FormData} [options.body] - Request body data
+ * @returns {Promise<Object>} Parsed JSON response data
+ * @throws {Error} Throws error with server message or HTTP status
+ * @example
+ * // GET request
+ * const restaurants = await apiFetch('https://10.120.32.94/restaurant/api/v1/restaurants');
+ * 
+ * @example
+ * // POST request with JSON
+ * const result = await apiFetch('/api/v1/auth/login', {
+ *   method: 'POST',
+ *   headers: { 'Content-Type': 'application/json' },
+ *   body: JSON.stringify({ username: 'user', password: 'pass' })
+ * });
+ */
 async function apiFetch(url, options = {}) {
     try {
+        // Get authentication token from memory or localStorage
         let authToken = token || (typeof localStorage !== "undefined" ? localStorage.getItem("token") : null);
         const headers = { ...options.headers };
+        
+        // Set Content-Type header unless uploading FormData
         if (!(options.body instanceof FormData)) {
             headers["Content-Type"] = "application/json";
         }
+        
+        // Add authorization header if token exists
         if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
 
         const res = await fetch(url, { ...options, headers });
@@ -61,6 +140,12 @@ async function apiFetch(url, options = {}) {
     }
 }
 
+/**
+ * @function saveAuth
+ * @description Saves user authentication data to memory and localStorage
+ * @param {Object} user - User object containing user details
+ * @param {string} tkn - Authentication token
+ */
 function saveAuth(user, tkn) {
     token = tkn;
     currentUser = user;
@@ -70,6 +155,10 @@ function saveAuth(user, tkn) {
     loadProfileData();
 }
 
+/**
+ * @function loadAuth
+ * @description Loads authentication data from localStorage on app initialization
+ */
 function loadAuth() {
     token = localStorage.getItem("token");
     const stored = localStorage.getItem("currentUser");
@@ -79,11 +168,16 @@ function loadAuth() {
             updateAuthUI();
             loadProfileData();
         } catch (e) {
+            // If stored user data is corrupted, log error
             console.error("Invalid stored user data", e);
         }
     }
 }
 
+/**
+ * @function logout
+ * @description Clears all authentication data and updates UI
+ */
 function logout() {
     token = null;
     currentUser = null;
@@ -93,6 +187,10 @@ function logout() {
     updateAuthUI();
 }
 
+/**
+ * @function updateAuthUI
+ * @description Updates navigation UI based on authentication state
+ */
 function updateAuthUI() {
     const loggedIn = !!currentUser && !!token;
     el.loginBtn?.classList.toggle("hidden", loggedIn);
@@ -102,11 +200,19 @@ function updateAuthUI() {
     if (loggedIn && el.profileBtn) el.profileBtn.textContent = currentUser.username;
 }
 
+/**
+ * @function loadProfileData
+ * @description Loads current user data into profile form fields and avatar
+ */
 function loadProfileData() {
     if (!currentUser) return;
+    
+    // Populate form fields with user data
     if (el.username) el.username.value = currentUser.username || "";
     if (el.email) el.email.value = currentUser.email || "";
     if (el.favoriteRestaurant) el.favoriteRestaurant.value = currentUser.favouriteRestaurant || "";
+    
+    // Load profile picture with error handling
     if (el.profilePic) {
         if (currentUser.avatar) {
             const avatarSrc = `${API_BASE}/uploads/${currentUser.avatar}`;
@@ -130,6 +236,11 @@ function loadProfileData() {
     }
 }
 
+/**
+ * @function updateUILanguage
+ * @description Updates all UI text elements to the specified language
+ * @param {string} lang - Language code ('fi' or 'en')
+ */
 function updateUILanguage(lang) {
     selectedLang = lang;
     const tr = translations[lang] || translations.fi;
@@ -162,8 +273,17 @@ function updateUILanguage(lang) {
     if (el.doRegister) el.doRegister.textContent = tr.doRegister;
 }
 
+/**
+ * @function haversine
+ * @description Calculates the great-circle distance between two points on Earth
+ * @param {number} lat1 - Latitude of first point in degrees
+ * @param {number} lon1 - Longitude of first point in degrees
+ * @param {number} lat2 - Latitude of second point in degrees
+ * @param {number} lon2 - Longitude of second point in degrees
+ * @returns {number} Distance between points in kilometers
+ */
 function haversine(lat1, lon1, lat2, lon2) {
-    const R = 6371;
+    const R = 6371; // Earth's radius in kilometers
     const toRad = x => x * Math.PI / 180;
     const dLat = toRad(lat2 - lat1);
     const dLon = toRad(lon2 - lon1);
@@ -172,23 +292,39 @@ function haversine(lat1, lon1, lat2, lon2) {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+/**
+ * @async
+ * @function getUserLocation
+ * @description Gets user's current geographical location using browser geolocation API
+ * @returns {Promise<Object|null>} Promise resolving to {lat, lng} object or null if unavailable
+ */
 function getUserLocation() {
     return new Promise((resolve) => {
-        if (!navigator.geolocation) return resolve(null);
-        if (userLocation) return resolve(userLocation);
+        // Check if geolocation is supported
+        if (!navigator.geolocation) resolve(null);
+        
+        // Return cached location if available
+        if (userLocation) resolve(userLocation);
 
+        // Request current position with timeout
         navigator.geolocation.getCurrentPosition(
             pos => {
                 userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
                 resolve(userLocation);
             },
-            () => resolve(null),
+            () => resolve(null), // Handle geolocation errors gracefully
             { timeout: 10000 }
         );
     });
 }
 
+/**
+ * @async
+ * @function renderMap
+ * @description Initializes and renders the Leaflet map with restaurant markers
+ */
 async function renderMap() {
+    // Check if Leaflet library is loaded
     if (typeof L === "undefined") {
         console.error("Leaflet library not loaded");
         return;
@@ -278,9 +414,16 @@ async function renderMap() {
     setTimeout(() => loading.remove(), 400);
 }
 
+/**
+ * @async
+ * @function renderRestaurants
+ * @description Renders restaurant cards in the UI with sorting and distance calculations
+ * @param {Array<Object>} [list=restaurants] - Array of restaurant objects to render
+ */
 async function renderRestaurants(list = restaurants) {
     if (!el.restaurantList) return;
 
+    // Sort restaurants with favorite first
     let sorted = [...list];
     if (currentUser?.favouriteRestaurant) {
         sorted.sort((a, b) => (a._id === currentUser.favouriteRestaurant ? -1 : b._id === currentUser.favouriteRestaurant ? 1 : 0));
@@ -321,6 +464,7 @@ async function renderRestaurants(list = restaurants) {
         el.restaurantList.appendChild(card);
     });
 
+    // Find and highlight the nearest restaurant
     if (loc) {
         let nearest = null, minDist = Infinity;
         restaurants.forEach(r => {
@@ -330,6 +474,7 @@ async function renderRestaurants(list = restaurants) {
                 if (d < minDist) { minDist = d; nearest = r; }
             }
         });
+        // Add visual indicator to nearest restaurant card
         if (nearest) {
             document.querySelectorAll(".restaurant-card").forEach(c => {
                 if (c.querySelector("h3")?.textContent === nearest.name) c.classList.add("nearest");
@@ -338,29 +483,56 @@ async function renderRestaurants(list = restaurants) {
     }
 }
 
-function filterAndRender() {
+/**
+ * @async
+ * @function filterAndRender
+ * @description Filters restaurants based on current filter criteria and re-renders the display
+ */
+async function filterAndRender() {
     let filtered = restaurants;
 
+    // Apply filters in sequence to progressively narrow results
+    
+    // Filter by city if a city is selected
     if (el.cityFilter?.value) filtered = filtered.filter(r => r.city === el.cityFilter.value);
+    
+    // Filter by service provider if one is selected
     if (el.providerFilter?.value) filtered = filtered.filter(r => r.company === el.providerFilter.value);
+    
+    // Filter by restaurant name if search text is entered
     if (el.searchInput?.value.trim()) {
         const term = el.searchInput.value.trim().toLowerCase();
         filtered = filtered.filter(r => r.name?.toLowerCase().includes(term));
     }
 
+    // Re-render both restaurant list and map with filtered data
     renderRestaurants(filtered);
     renderMap();
 }
 
+/**
+ * @async
+ * @function setFavoriteRestaurant
+ * @description Sets a restaurant as the user's favorite
+ * @param {string} id - Restaurant ID to set as favorite
+ * @global
+ */
 window.setFavoriteRestaurant = async (id) => {
+    // Check if user is authenticated
     if (!currentUser || !token) return;
+    
     try {
+        // Update favorite restaurant on server
         await apiFetch(`${API_BASE}/users`, {
             method: "PUT",
             body: JSON.stringify({ favouriteRestaurant: id })
         });
+        
+        // Update local user data
         currentUser.favouriteRestaurant = id;
         localStorage.setItem("currentUser", JSON.stringify(currentUser));
+        
+        // Refresh display to show favorite highlighting
         filterAndRender();
         alert(t("favSet"));
     } catch {
@@ -368,6 +540,13 @@ window.setFavoriteRestaurant = async (id) => {
     }
 };
 
+/**
+ * @async
+ * @function displayMenu
+ * @description Displays restaurant menu in a modal popup
+ * @param {string} title - Menu title to display
+ * @param {string|Array} content - Menu content (HTML string or array of menu items)
+ */
 async function displayMenu(title, content) {
     if (!el.menuDisplay) return;
     el.menuTitle.textContent = title;
@@ -380,6 +559,13 @@ async function displayMenu(title, content) {
     document.body.style.overflow = "hidden";
 }
 
+/**
+ * @async
+ * @function showDailyMenu
+ * @description Fetches and displays daily menu for a specific restaurant
+ * @param {string} id - Restaurant ID
+ * @global
+ */
 window.showDailyMenu = async (id) => {
     const r = restaurants.find(x => x._id === id);
     if (!r) return;
@@ -393,6 +579,13 @@ window.showDailyMenu = async (id) => {
     }
 };
 
+/**
+ * @async
+ * @function showWeeklyMenu
+ * @description Fetches and displays weekly menu for a specific restaurant
+ * @param {string} id - Restaurant ID
+ * @global
+ */
 window.showWeeklyMenu = async (id) => {
     const r = restaurants.find(x => x._id === id);
     if (!r) return;
@@ -405,9 +598,10 @@ window.showWeeklyMenu = async (id) => {
             ? ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
             : ["Maanantai", "Tiistai", "Keskiviikko", "Torstai", "Perjantai", "Lauantai", "Sunnuntai"];
 
+        // Handle special case: single day with all courses (divide into weekdays)
         if (week.days.length === 1 && week.days[0].courses) {
             const all = Object.values(week.days[0].courses);
-            const chunk = Math.ceil(all.length / 5);
+            const chunk = Math.ceil(all.length / 5); // Divide courses across 5 weekdays
             for (let i = 0; i < 5; i++) {
                 const slice = all.slice(i * chunk, (i + 1) * chunk);
                 html += `<h4>${weekdays[i]}</h4>`;
@@ -420,17 +614,21 @@ window.showWeeklyMenu = async (id) => {
                 let dateStr;
                 if (d.date) {
                     try {
+                        // Parse API date string into JavaScript Date object
                         const date = new Date(d.date);
                         if (isNaN(date.getTime())) {
+                            // Invalid date, use raw string
                             dateStr = d.date;
                         } else {
+                            // Format date according to selected language
                             dateStr = date.toLocaleDateString(selectedLang === "en" ? "en-GB" : "fi-FI", { weekday: "long", day: "numeric", month: "long" });
                         }
                     } catch (error) {
                         console.error("Date parsing error:", error, "Date string:", d.date);
-                        dateStr = d.date;
+                        dateStr = d.date; // Fallback to raw date string
                     }
                 } else {
+                    // No date provided, use weekday name
                     dateStr = weekdays[i % 7];
                 }
                 html += `<hr><h4>${dateStr}</h4><hr>`;
@@ -449,21 +647,38 @@ window.showWeeklyMenu = async (id) => {
     }
 };
 
+/**
+ * @async
+ * @function fetchRestaurants
+ * @description Fetches restaurant data from API and initializes the application
+ */
 async function fetchRestaurants() {
+    // Show loading indicator
     if (el.restaurantList) el.restaurantList.innerHTML = `<div class="loading-indicator">${t("loadingRestaurants")}</div>`;
 
     try {
+        // Fetch restaurants from API
         restaurants = await apiFetch(`${API_BASE}/restaurants`);
+        
+        // Initialize filter dropdowns with restaurant data
         populateFilters();
+        
+        // Render both restaurant list and map concurrently
         await Promise.all([renderRestaurants(), renderMap()]);
     } catch (err) {
+        // Show error message if fetch fails
         if (el.restaurantList) el.restaurantList.innerHTML = "<p style='color:red'>Ravintoloiden lataus epäonnistui</p>";
     }
 }
 
+/**
+ * @function populateFilters
+ * @description Populates filter dropdowns with unique cities, companies, and restaurants
+ */
 function populateFilters() {
     if (!el.cityFilter || !el.providerFilter || !el.favoriteRestaurant) return;
 
+    // Extract unique cities and companies from restaurant data
     const cities = [...new Set(restaurants.map(r => r.city))].sort();
     const companies = [...new Set(restaurants.map(r => r.company))].sort();
 
@@ -479,6 +694,10 @@ function populateFilters() {
 }
 
 if (typeof document !== "undefined") {
+    /**
+     * @function initializeElements
+     * @description Caches DOM elements for performance optimization
+     */
     function initializeElements() {
         el = {
             langSelect: document.getElementById("langSelect"),
@@ -516,7 +735,12 @@ if (typeof document !== "undefined") {
         };
     }
 
+    /**
+     * @function setupEventListeners
+     * @description Sets up all event listeners for user interactions
+     */
     function setupEventListeners() {
+        // Theme toggle functionality
         el.themeToggle?.addEventListener("click", () => {
             document.documentElement.classList.toggle("dark");
             const isDark = document.documentElement.classList.contains("dark");

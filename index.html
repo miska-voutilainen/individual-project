@@ -1,28 +1,52 @@
 <!DOCTYPE html>
+<!-- 
+    Student Restaurant Finder Application
+    Description: A responsive web application for finding student restaurants in Finland
+    Features: Interactive map, filtering, authentication, multilingual support
+    Author: Miska Voutilainen
+    Version: 1.0.0
+-->
 <html lang="fi">
 <head>
+    <!-- Character encoding and viewport settings -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Löydä Suomen opiskelijaravintolat, suodata kaupungin ja palveluntarjoajan mukaan sekä katso päivän menu.">
+    
+    <!-- Page title -->
     <title>Opiskelijaravintolat Suomessa</title>
+    
+    <!-- Favicon (empty to prevent 404 errors) -->
     <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     
+    <!-- External Dependencies: Leaflet CSS for interactive maps -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
           integrity="sha256-sA+zWATbFveLLNqHNCLzX3Js50qqXi+jrQ7Dc7RZ6LI="
           crossorigin=""/>
 
+    <!-- Custom CSS styles -->
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Main application container -->
     <div class="container">
+        
+        <!-- Header section with title and navigation -->
         <header>
             <h1 id="mainTitle">Opiskelijaravintolat Suomessa</h1>
+            
+            <!-- Navigation with authentication and utility buttons -->
             <nav aria-label="Päänavigaatio">
+                <!-- Authentication buttons (visibility controlled by JavaScript) -->
                 <button id="loginBtn">Kirjaudu sisään</button>
                 <button id="registerBtn">Rekisteröidy</button>
                 <button id="profileBtn" class="hidden">Profiili</button>
                 <button id="logoutBtn" class="hidden">Kirjaudu ulos</button>
+                
+                <!-- Theme toggle button -->
                 <button id="themeToggle" aria-label="Vaihda teemaa">Dark Mode</button>
+                
+                <!-- Language selection dropdown -->
                 <select id="langSelect" style="margin-left:1em;">
                     <option value="fi">Suomi</option>
                     <option value="en">English</option>
@@ -30,56 +54,79 @@
             </nav>
         </header>
 
+        <!-- Restaurant filtering controls -->
         <section class="filters">
             <h2 id="filterTitle">Suodata ravintoloita</h2>
             <div class="filter-group">
+                <!-- City filter dropdown (populated dynamically) -->
                 <select id="cityFilter">
                     <option value="">Kaikki kaupungit</option>
                 </select>
+                
+                <!-- Service provider filter dropdown (populated dynamically) -->
                 <select id="providerFilter">
                     <option value="">Kaikki palveluntarjoajat</option>
                 </select>
+                
+                <!-- Text search input for restaurant names -->
                 <input type="text" id="searchInput" placeholder="Hae ravintolaa nimellä...">
             </div>
         </section>
 
+        <!-- Interactive Leaflet map container -->
         <div id="map" aria-label="Kartta opiskelijaravintoloista"></div>
 
+        <!-- Restaurant cards grid container (populated dynamically) -->
         <section class="restaurant-list" id="restaurantList"></section>
 
+        <!-- Modal popup for displaying restaurant menus -->
         <section class="menu-display" id="menuDisplay">
             <button id="closeMenu" aria-label="Sulje menu">×</button>
             <h2 id="menuTitle"></h2>
             <div id="menuContent"></div>
         </section>
 
+        <!-- User profile section (hidden by default, shown when logged in) -->
         <section class="profile hidden" id="profileSection">
             <h2 id="profileHeader">Omat tiedot</h2>
+            
+            <!-- Profile picture with upload functionality -->
             <img src="" alt="Profiilikuva" id="profilePic" width="120" height="120">
             <input type="file" id="uploadPic" accept="image/*">
+            
+            <!-- User information form fields -->
             <input type="text" id="username" placeholder="Käyttäjätunnus" disabled>
             <input type="email" id="email" placeholder="Sähköposti">
+            
+            <!-- Favorite restaurant selection dropdown -->
             <select id="favoriteRestaurant">
                 <option value="" id="favRestOpt">Valitse suosikkiravintola</option>
             </select>
+            
             <button id="updateProfile">Päivitä tiedot</button>
         </section>
     </div>
 
+    <!-- Login Modal Dialog -->
     <div class="modal" id="loginModal">
         <div class="modal-content">
             <span class="close" id="closeLogin">×</span>
             <h2 id="loginHeader">Kirjaudu sisään</h2>
+            
+            <!-- Login form fields -->
             <input type="text" id="loginUser" placeholder="Käyttäjätunnus">
             <input type="password" id="loginPass" placeholder="Salasana">
             <button id="doLogin">Kirjaudu</button>
         </div>
     </div>
 
+    <!-- Registration Modal Dialog -->
     <div class="modal" id="registerModal">
         <div class="modal-content">
             <span class="close" id="closeRegister">×</span>
             <h2 id="registerHeader">Rekisteröidy</h2>
+            
+            <!-- Registration form fields -->
             <input type="text" id="regUser" placeholder="Käyttäjätunnus">
             <input type="email" id="regEmail" placeholder="Sähköposti">
             <input type="password" id="regPass" placeholder="Salasana">
@@ -87,10 +134,12 @@
         </div>
     </div>
 
+    <!-- External Dependencies: Leaflet JavaScript for interactive maps -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
             crossorigin=""></script>
 
+    <!-- Main application JavaScript (ES6 module) -->
     <script type="module" src="index.js"></script>
 </body>
 </html>
