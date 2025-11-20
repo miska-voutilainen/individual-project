@@ -492,15 +492,25 @@ async function renderMap() {
 async function renderRestaurants(list = restaurants) {
     if (!el.restaurantList) return;
 
-    // Sort restaurants with favorite first
+    const loc = await getUserLocation();
+    
+    // Sort restaurants with favorite first, or nearest first if no favorite
     let sorted = [...list];
     if (currentUser?.favouriteRestaurant) {
         sorted.sort((a, b) => (a._id === currentUser.favouriteRestaurant ? -1 : b._id === currentUser.favouriteRestaurant ? 1 : 0));
+    } else if (loc) {
+        // Sort by distance if no favorite is selected and location is available
+        sorted.sort((a, b) => {
+            if (!a.location?.coordinates || !b.location?.coordinates) return 0;
+            const [lngA, latA] = a.location.coordinates;
+            const [lngB, latB] = b.location.coordinates;
+            const distA = haversine(loc.lat, loc.lng, latA, lngA);
+            const distB = haversine(loc.lat, loc.lng, latB, lngB);
+            return distA - distB;
+        });
     }
 
     el.restaurantList.innerHTML = sorted.length ? "" : `<p>${t("noResults")}</p>`;
-
-    const loc = await getUserLocation();
 
     sorted.forEach(r => {
         const card = document.createElement("div");
@@ -520,11 +530,16 @@ async function renderRestaurants(list = restaurants) {
                </button>`
             : "";
 
+        const addressLabel = selectedLang === "en" ? "Address:" : "Osoite:";
+        const cityLabel = selectedLang === "en" ? "City:" : "Kaupunki:";
+        const providerLabel = selectedLang === "en" ? "Provider:" : "Palveluntarjoaja:";
+
         card.innerHTML = `
             <h3>${r.name}</h3>
-            <p><strong>${t("address") || (selectedLang === "en" ? "Address:" : "Osoite:")}</strong> ${r.address}</p>
-            <p><strong>${t("cityLabel") || (selectedLang === "en" ? "City:" : "Kaupunki:")}</strong> ${r.city}</p>
-            <p><strong>${t("providerLabel") || (selectedLang === "en" ? "Provider:" : "Palveluntarjoaja:")}</strong> ${r.company}</p>            ${distanceHTML}
+            <p><strong>${addressLabel}</strong> ${r.address}</p>
+            <p><strong>${cityLabel}</strong> ${r.city}</p>
+            <p><strong>${providerLabel}</strong> ${r.company}</p>
+            ${distanceHTML}
             ${favBtn}
             <div class="menu-options">
                 <button class="menu-btn" onclick="window.showDailyMenu('${r._id}')">${t("menuDay")}</button>
@@ -534,16 +549,23 @@ async function renderRestaurants(list = restaurants) {
     });
 
     // Find and highlight the nearest restaurant
-    if (loc) {
+    if (loc && !currentUser?.favouriteRestaurant) {
+        // Only highlight nearest if no favorite is selected (since nearest is already first)
+        const firstCard = document.querySelector(".restaurant-card");
+        if (firstCard && sorted.length > 0 && sorted[0].location?.coordinates) {
+            firstCard.classList.add("nearest");
+        }
+    } else if (loc && currentUser?.favouriteRestaurant) {
+        // Find and highlight nearest restaurant when favorite exists
         let nearest = null, minDist = Infinity;
-        restaurants.forEach(r => {
-            if (r.location?.coordinates) {
+        sorted.forEach(r => {
+            if (r.location?.coordinates && r._id !== currentUser.favouriteRestaurant) {
                 const [lng, lat] = r.location.coordinates;
                 const d = haversine(loc.lat, loc.lng, lat, lng);
                 if (d < minDist) { minDist = d; nearest = r; }
             }
         });
-        // Add visual indicator to nearest restaurant card
+        // Add visual indicator to nearest restaurant card (excluding favorite)
         if (nearest) {
             document.querySelectorAll(".restaurant-card").forEach(c => {
                 if (c.querySelector("h3")?.textContent === nearest.name) c.classList.add("nearest");
@@ -848,6 +870,8 @@ if (typeof document !== "undefined") {
                 await apiFetch(`${API_BASE}/users`, { method: "POST", body: JSON.stringify({ username: u, email: e, password: p }) });
                 alert("Rekisteröityminen onnistui! Tarkista sähköpostisi.");
                 el.registerModal.style.display = "none";
+                // Reload page to show login form and updated UI
+                window.location.reload();
             } catch { }
         });
 
@@ -858,6 +882,8 @@ if (typeof document !== "undefined") {
                 const data = await apiFetch(`${API_BASE}/auth/login`, { method: "POST", body: JSON.stringify({ username: u, password: p }) });
                 saveAuth(data.data, data.token);
                 el.loginModal.style.display = "none";
+                // Reload page to refresh UI and restaurant sorting
+                window.location.reload();
             } catch { }
         });
 
@@ -931,7 +957,11 @@ if (typeof document !== "undefined") {
             document.body.style.overflow = "";
         });
 
-        el.logoutBtn?.addEventListener("click", logout);
+        el.logoutBtn?.addEventListener("click", () => {
+            logout();
+            // Reload page to refresh UI and restaurant sorting
+            window.location.reload();
+        });
         el.profileBtn?.addEventListener("click", () => {
             el.profileSection?.classList.remove("hidden");
             el.profileSection?.scrollIntoView({ behavior: "smooth" });
