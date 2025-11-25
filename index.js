@@ -96,19 +96,6 @@ const translations = {
 const t = (key) => translations[selectedLang][key] || translations.fi[key] || key;
 
 /**
- * @function isValidUsername
- * @description Validates username to prevent SQL injection and ensure security
- * @param {string} username - Username to validate
- * @returns {boolean} True if username is valid, false otherwise
- */
-const isValidUsername = (username) => {
-    // Only allow alphanumeric characters, underscores, and hyphens
-    // Length between 3-20 characters
-    const usernameRegex = /^[a-zA-Z0-9_-]{3,20}$/;
-    return usernameRegex.test(username);
-};
-
-/**
  * @async
  * @function apiFetch
  * @description Centralized API fetch function with authentication and error handling.
@@ -941,6 +928,19 @@ if (typeof document !== "undefined") {
             if (e.target === el.registerModal) el.registerModal.style.display = "none";
         });
 
+        /**
+         * @event click
+         * @description Handles user registration with comprehensive validation including:
+         * - Username format validation (prevents SQL injection)
+         * - Password confirmation matching (prevents typos)
+         * - Minimum password length enforcement (security requirement)
+         * - Automatic login after successful registration (improved UX)
+         * @listens HTMLElement#click
+         * @fires apiFetch - POST to /users for registration
+         * @fires apiFetch - POST to /auth/login for automatic login
+         * @throws {Error} If validation fails or API request fails
+         * @since 1.2.0
+         */
         el.doRegister?.addEventListener("click", async () => {
             const u = el.regUser.value.trim(), p = el.regPass.value, pc = el.regPassConfirm.value;
             if (!u || !p || !pc) return alert(t("fillAllFields"));
